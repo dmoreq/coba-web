@@ -1,0 +1,15 @@
+services:
+  - name: coba-backend
+    type: web
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    rootDir: backend
+    buildCommand: uv sync --frozen
+    startCommand: .venv/bin/uvicorn --app-dir src coba_server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeployTrigger: off
+    envVars:
+      - key: COBA_CORS_ORIGINS
+        sync: false

@@ -30,6 +30,17 @@ class TestHealthEndpoint:
         assert s.host == "0.0.0.0"
         assert s.port == 8000
 
+    def test_cors_origins_accept_comma_separated_env(self, monkeypatch):
+        monkeypatch.setenv(
+            "COBA_CORS_ORIGINS",
+            "https://coba-web.vercel.app, https://coba-api.onrender.com/",
+        )
+        s = Settings()
+        assert s.cors_origins == [
+            "https://coba-web.vercel.app",
+            "https://coba-api.onrender.com",
+        ]
+
 
 class TestScaffolding:
     def test_package_imports(self):

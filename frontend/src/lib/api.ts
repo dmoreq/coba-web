@@ -5,8 +5,28 @@
 
 import type { AlgorithmId } from "./types";
 
-const API_BASE: string =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) || "http://localhost:8000";
+function normalizeBaseUrl(url: string): string {
+  return url.replace(/\/+$/, "");
+}
+
+function getApiBase(): string {
+  const envUrl = typeof process !== "undefined" ? process.env?.NEXT_PUBLIC_API_URL?.trim() : "";
+  if (envUrl) {
+    return normalizeBaseUrl(envUrl);
+  }
+
+  if (typeof window !== "undefined") {
+    const { hostname, origin } = window.location;
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      return "http://localhost:8000";
+    }
+    return origin;
+  }
+
+  return "http://localhost:8000";
+}
+
+const API_BASE = getApiBase();
 
 // ── Recursive snake_case → camelCase mapper ──
 

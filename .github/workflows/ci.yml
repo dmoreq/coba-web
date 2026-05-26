@@ -11,7 +11,7 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - name: Install dependencies
-        run: uv sync --frozen --directory backend
+        run: uv sync --frozen --extra dev --directory backend
       - name: Lint
         run: uv run --directory backend ruff check src/
       - name: Test
