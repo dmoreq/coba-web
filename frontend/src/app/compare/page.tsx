@@ -1,6 +1,6 @@
 "use client";
 
-import { DualRegretChart, PullDistChart } from "@/components/charts";
+import { CumRewardsChart, DualRegretChart, PullDistChart, RegretLineChart } from "@/components/charts";
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlgorithmSelector } from "@/components/shared/AlgorithmSelector";
@@ -10,9 +10,9 @@ import { TruthToggle } from "@/components/shared/TruthToggle";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { api } from "@/lib/api";
 import type { ApiRunResponse, SimStateResponse } from "@/lib/api";
-import { ALGO_META, createDefaultSimState } from "@/lib/constants";
+import { ALGO_META, createDefaultSimState, DEFAULT_ARMS } from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function ComparePage() {
   const [algoA, setAlgoA] = useState<AlgorithmId>("ucb1");
@@ -25,17 +25,21 @@ export default function ComparePage() {
   const [isRunning, setIsRunning] = useState(false);
   const [speed, setSpeed] = useState(2);
 
+  // Use a ref to avoid the initSims ← setIds → initSims re-creates → effect re-fires loop
+  const idsRef = useRef(ids);
+  idsRef.current = ids;
+
   const initSims = useCallback(
     async (algoAval: AlgorithmId, algoBval: AlgorithmId) => {
       setError(null);
       try {
-        // Clean up old simulations
-        if (ids) {
+        // Clean up old simulations via ref to avoid dependency on ids
+        if (idsRef.current) {
           await Promise.all([
-            api.deleteSimulation(ids.a).catch(() => {
+            api.deleteSimulation(idsRef.current.a).catch(() => {
               /* ignore */
             }),
-            api.deleteSimulation(ids.b).catch(() => {
+            api.deleteSimulation(idsRef.current.b).catch(() => {
               /* ignore */
             }),
           ]);
@@ -61,11 +65,19 @@ export default function ComparePage() {
         setError(e instanceof Error ? e.message : "Failed to initialize");
       }
     },
-    [ids],
+    [], // stable — no dependencies that change during the lifecycle
   );
 
   useEffect(() => {
     initSims(algoA, algoB);
+    // Cleanup both sims on unmount
+    return () => {
+      const current = idsRef.current;
+      if (current) {
+        api.deleteSimulation(current.a).catch(() => {});
+        api.deleteSimulation(current.b).catch(() => {});
+      }
+    };
   }, [initSims, algoA, algoB]);
 
   const handleStep = useCallback(async () => {
@@ -192,11 +204,25 @@ export default function ComparePage() {
                 <div className="bg-white border border-gray-3 rounded-md p-lg flex-1">
                   <UCBDisplay simState={ds} showGroundTruth={showGT} />
                 </div>
-                <div className="bg-white border border-gray-3 rounded-md p-lg">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-sm">
-                    Pull Distribution
+                <div className="flex gap-[10px]">
+                  <div className="flex-1 bg-white border border-gray-3 rounded-md p-lg">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                      Cumulative Regret
+                    </div>
+                    <RegretLineChart regretHistory={ds.regretHistory} width={180} height={90} />
                   </div>
-                  <PullDistChart arms={ds.arms} armStates={ds.armStates} width={240} height={90} />
+                  <div className="flex-1 bg-white border border-gray-3 rounded-md p-lg">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                      Cumulative Rewards
+                    </div>
+                    <CumRewardsChart history={ds.history} width={180} height={90} />
+                  </div>
+                  <div className="flex-1 bg-white border border-gray-3 rounded-md p-lg">
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                      Pull Distribution
+                    </div>
+                    <PullDistChart arms={ds.arms} armStates={ds.armStates} width={180} height={90} />
+                  </div>
                 </div>
               </div>
             );

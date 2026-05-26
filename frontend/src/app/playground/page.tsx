@@ -1,6 +1,6 @@
 "use client";
 
-import { PullDistChart, RegretLineChart } from "@/components/charts";
+import { CumRewardsChart, PullDistChart, RegretLineChart } from "@/components/charts";
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { PageShell } from "@/components/layout/PageShell";
 import { ControlBar } from "@/components/playground/ControlBar";
@@ -36,12 +36,14 @@ export default function PlaygroundPage() {
   const display = simState ?? defaultDisplay();
   const initialized = useRef(false);
 
-  // Initialize simulation once on mount
+  // Initialize simulation once — reuse existing store sim if coming back via SPA nav
   useEffect(() => {
     if (initialized.current) return;
     initialized.current = true;
-    initialize(DEFAULT_ARMS, "ucb1", 2.0, 0.1);
-  }, [initialize]);
+    if (!simState) {
+      initialize(DEFAULT_ARMS, "ucb1", 2.0, 0.1);
+    }
+  }, [initialize, simState]);
 
   // Async-safe auto-play
   useSimulationRunner(isRunning, speed, storeStep);
@@ -89,6 +91,9 @@ export default function PlaygroundPage() {
           <div className="flex gap-[10px]">
             <Panel title="Cumulative Regret">
               <RegretLineChart regretHistory={display.regretHistory} width={380} height={120} />
+            </Panel>
+            <Panel title="Cumulative Rewards">
+              <CumRewardsChart history={display.history} width={380} height={120} />
             </Panel>
             <Panel title="Pull Distribution">
               <PullDistChart
