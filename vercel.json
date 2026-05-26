@@ -1,4 +1,4 @@
 {
-  "framework": "nextjs",
-  "rootDirectory": "frontend"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "nextjs"
 }
