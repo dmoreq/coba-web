@@ -9,29 +9,13 @@ import { StepFeed } from "@/components/playground/StepFeed";
 import { WhyPanel } from "@/components/playground/WhyPanel";
 import { Panel } from "@/components/ui/Panel";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
-import { DEFAULT_ARMS } from "@/lib/constants";
+import { DEFAULT_ARMS, createDefaultSimState } from "@/lib/constants";
 import type { AlgorithmId, SimState } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
 import { useEffect, useRef, useState } from "react";
 
 function defaultDisplay(): SimState {
-  return {
-    arms: DEFAULT_ARMS,
-    armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
-    linMeta: DEFAULT_ARMS.map(() => ({
-      A: [
-        [1, 0],
-        [0, 1],
-      ] as [[number, number], [number, number]],
-      b: [0, 0] as [number, number],
-    })),
-    algorithm: "ucb1" as AlgorithmId,
-    alpha: 2.0,
-    epsilon: 0.1,
-    t: 0,
-    history: [],
-    regretHistory: [],
-  };
+  return createDefaultSimState("ucb1");
 }
 
 export default function PlaygroundPage() {

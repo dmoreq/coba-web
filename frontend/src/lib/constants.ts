@@ -1,6 +1,6 @@
 /** Algorithm metadata — pure UI presentation, no engine logic. */
 
-import type { AlgoMeta, Arm } from "@/lib/types";
+import type { AlgoMeta, AlgorithmId, Arm, SimState } from "@/lib/types";
 
 /** Algorithm metadata for display */
 export const ALGO_META: Record<string, AlgoMeta> = {
@@ -61,3 +61,27 @@ export const DEFAULT_SPEED = 2;
 export const DEFAULT_ALPHA = 2.0;
 export const DEFAULT_EPSILON = 0.1;
 export const MAX_HISTORY_LENGTH = 150;
+
+/**
+ * Create a default empty SimState for initialization.
+ * Used in Playground and Compare pages to ensure consistent default shape.
+ */
+export function createDefaultSimState(algorithm: AlgorithmId = "ucb1"): SimState {
+  return {
+    arms: DEFAULT_ARMS,
+    armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
+    linMeta: DEFAULT_ARMS.map(() => ({
+      A: [
+        [1, 0],
+        [0, 1],
+      ] as [[number, number], [number, number]],
+      b: [0, 0] as [number, number],
+    })),
+    algorithm,
+    alpha: DEFAULT_ALPHA,
+    epsilon: DEFAULT_EPSILON,
+    t: 0,
+    history: [],
+    regretHistory: [],
+  };
+}

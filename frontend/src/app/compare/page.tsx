@@ -10,15 +10,9 @@ import { TruthToggle } from "@/components/shared/TruthToggle";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { api } from "@/lib/api";
 import type { SimStateResponse } from "@/lib/api";
-import { ALGO_META } from "@/lib/constants";
+import { ALGO_META, createDefaultSimState } from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";
-
-const DEFAULT_ARMS = [
-  { id: "email", label: "Email", trueProb: 0.2, color: "#228be6", lightColor: "#e7f5ff" },
-  { id: "sms", label: "SMS", trueProb: 0.8, color: "#12b886", lightColor: "#e6fcf5" },
-  { id: "push", label: "Push", trueProb: 0.5, color: "#fd7e14", lightColor: "#fff4e6" },
-];
 
 export default function ComparePage() {
   const [algoA, setAlgoA] = useState<AlgorithmId>("ucb1");
@@ -114,40 +108,8 @@ export default function ComparePage() {
   // Use the same simulation runner pattern as Playground to avoid race conditions
   useSimulationRunner(isRunning, speed, handleStep);
 
-  const dsA = simA ?? {
-    arms: DEFAULT_ARMS,
-    armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
-    linMeta: DEFAULT_ARMS.map(() => ({
-      A: [
-        [1, 0],
-        [0, 1],
-      ] as [[number, number], [number, number]],
-      b: [0, 0] as [number, number],
-    })),
-    t: 0,
-    history: [],
-    regretHistory: [],
-    algorithm: algoA,
-    alpha: 2.0,
-    epsilon: 0.1,
-  };
-  const dsB = simB ?? {
-    arms: DEFAULT_ARMS,
-    armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
-    linMeta: DEFAULT_ARMS.map(() => ({
-      A: [
-        [1, 0],
-        [0, 1],
-      ] as [[number, number], [number, number]],
-      b: [0, 0] as [number, number],
-    })),
-    t: 0,
-    history: [],
-    regretHistory: [],
-    algorithm: algoB,
-    alpha: 2.0,
-    epsilon: 0.1,
-  };
+  const dsA = simA ?? createDefaultSimState(algoA);
+  const dsB = simB ?? createDefaultSimState(algoB);
   const colorA = ALGO_META[algoA]?.color || "#228be6";
   const colorB = ALGO_META[algoB]?.color || "#12b886";
 

@@ -5,6 +5,7 @@ export {
   DEFAULT_ALPHA,
   DEFAULT_EPSILON,
   MAX_HISTORY_LENGTH,
+  createDefaultSimState,
 } from "./constants";
 export type {
   Arm,
