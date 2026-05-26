@@ -8,7 +8,7 @@ const FORMULA_LABELS: Record<AlgorithmId, string> = {
   ucb1: "Formula: score = \u03BC\u0302 + \u03B1\u221A(2\u00B7ln(t)/n)",
   thompson: "Posterior: Beta(successes+1, failures+1)",
   linucb: "score = \u03B8\u1D56x + \u03B1\u221A(x\u1D56A\u207B\u00B9x)",
-  epsilon: "score = mean estimate",
+  epsilon_greedy: "score = mean estimate",
 };
 
 export function FormulaPanel({ simState }: FormulaPanelProps) {
