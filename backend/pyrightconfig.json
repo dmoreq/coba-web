@@ -1,0 +1,12 @@
+{
+  "typeCheckingMode": "standard",
+  "pythonVersion": "3.12",
+  "include": ["src"],
+  "exclude": [".venv", "__pycache__"],
+  "reportMissingImports": false,
+  "reportMissingTypeStubs": false,
+  "reportPrivateImportUsage": false,
+  "reportConstantRedefinition": false,
+  "reportOptionalVariableAccess": false,
+  "reportPossiblyUnboundVariable": false
+}
