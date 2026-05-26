@@ -56,6 +56,7 @@ const mockSimResponse = (t: number) => ({
     algorithm: "ucb1",
     alpha: 2.0,
     epsilon: 0.1,
+    hyperparams: { alpha: 2.0 },
     history:
       t > 0
         ? [
@@ -111,33 +112,100 @@ beforeEach(() => {
 describe("simulation store", () => {
   it("initialize creates simulation via API", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
-    await useSimulationStore.getState().initialize(mockArms, "ucb1", 2.0, 0.1);
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
     const state = useSimulationStore.getState();
     expect(state.simId).toBe("sim-123");
     expect(state.simState?.t).toBe(0);
+    expect(state.simState?.hyperparams).toEqual({ alpha: 2.0 });
+    expect(state.simState?.algorithm).toBe("ucb1");
     expect(api.createSimulation).toHaveBeenCalledTimes(1);
+  });
+
+  it("initialize sends snake_case arms and hyperparams", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "linucb", {
+      alpha: 2.0,
+      l2_lambda: 1.0,
+      gamma: 1.0,
+      n_clusters: 5,
+    });
+    expect(api.createSimulation).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ true_prob: 0.3 }),
+      ]),
+      "linucb",
+      { alpha: 2.0, l2_lambda: 1.0, gamma: 1.0, n_clusters: 5 },
+      expect.any(Number),
+    );
+  });
+
+  it("initialize cleans up old simulation", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+    expect(api.deleteSimulation).not.toHaveBeenCalled(); // first init, no old sim
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "thompson", {});
+    expect(api.deleteSimulation).toHaveBeenCalledWith("sim-123");
   });
 
   it("initialize sets loading state", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
-    const promise = useSimulationStore.getState().initialize(mockArms, "ucb1", 2.0, 0.1);
+    const promise = useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
     expect(useSimulationStore.getState().isLoading).toBe(true);
     await promise;
     expect(useSimulationStore.getState().isLoading).toBe(false);
   });
 
+  it("initialize sets error on API failure", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("API down"));
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+    const state = useSimulationStore.getState();
+    expect(state.error).toBe("API down");
+    expect(state.simId).toBeNull();
+  });
+
   it("step calls API and updates state", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
-    await useSimulationStore.getState().initialize(mockArms, "ucb1", 2.0, 0.1);
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
 
     (api.step as ReturnType<typeof vi.fn>).mockResolvedValue(mockStepResponse);
 
     await useSimulationStore.getState().step();
     expect(api.step).toHaveBeenCalledWith("sim-123");
-    // verify state is updated from step response (no getSimulation call needed)
     const state = useSimulationStore.getState();
     expect(state.simState?.t).toBe(2);
     expect(state.simState?.history.length).toBe(1);
+  });
+
+  it("step preserves hyperparams and algorithm", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "linucb", {
+      alpha: 3.0,
+      l2_lambda: 2.0,
+      n_clusters: 7,
+    });
+    (api.step as ReturnType<typeof vi.fn>).mockResolvedValue(mockStepResponse);
+    await useSimulationStore.getState().step();
+    const state = useSimulationStore.getState();
+    expect(state.simState?.hyperparams).toEqual({ alpha: 3.0, l2_lambda: 2.0, n_clusters: 7 });
+    expect(state.simState?.algorithm).toBe("linucb");
+  });
+
+  it("step returns early if no simId or simState", async () => {
+    await useSimulationStore.getState().step();
+    expect(api.step).not.toHaveBeenCalled();
+  });
+
+  it("step sets error and stops running on failure", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+
+    (api.step as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("Step failed"));
+    await useSimulationStore.getState().step();
+    const state = useSimulationStore.getState();
+    expect(state.error).toBe("Step failed");
+    expect(state.isRunning).toBe(false);
   });
 
   it("play/pause toggle isRunning", () => {
@@ -157,26 +225,53 @@ describe("simulation store", () => {
     expect(useSimulationStore.getState().seed).toBe(99);
   });
 
-  it("reset creates new simulation", async () => {
+  it("reset preserves hyperparams when algorithm unchanged", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
-    await useSimulationStore.getState().initialize(mockArms, "ucb1", 2.0, 0.1);
+    await useSimulationStore
+      .getState()
+      .initialize(mockArms, "linucb", { alpha: 3.0, l2_lambda: 2.0, n_clusters: 7 });
+    const oldHyperparams = useSimulationStore.getState().simState?.hyperparams;
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore.getState().reset(); // no algo arg
+    expect(api.createSimulation).toHaveBeenCalledWith(
+      expect.any(Array),
+      "linucb",
+      { alpha: 3.0, l2_lambda: 2.0, n_clusters: 7 },
+      expect.any(Number),
+    );
+  });
+
+  it("reset uses DEFAULT_HYPERPARAMS when algorithm changes", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore
+      .getState()
+      .initialize(mockArms, "linucb", { alpha: 3.0, l2_lambda: 2.0, n_clusters: 7 });
 
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
     await useSimulationStore.getState().reset("thompson");
-    // createSimulation called with (arms, algorithm, hyperparams, seed)
     expect(api.createSimulation).toHaveBeenCalledWith(
       expect.any(Array),
       "thompson",
-      expect.any(Object),
+      {}, // empty — thompson has no hyperparams
       expect.any(Number),
     );
+  });
+
+  it("reset returns early if no simState", async () => {
+    await useSimulationStore.getState().reset("ucb1");
+    expect(api.createSimulation).not.toHaveBeenCalled();
   });
 
   it("applySettings creates new simulation", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
     await useSimulationStore
       .getState()
-      .applySettings({ arms: mockArms, algorithm: "thompson", alpha: 1.5, epsilon: 0.2 });
+      .applySettings({
+        arms: mockArms,
+        algorithm: "thompson",
+        hyperparams: { alpha: 1.5, epsilon: 0.2 },
+      });
     expect(api.createSimulation).toHaveBeenCalledTimes(1);
     expect(api.createSimulation).toHaveBeenCalledWith(
       expect.any(Array),

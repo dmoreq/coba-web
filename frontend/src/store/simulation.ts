@@ -1,13 +1,13 @@
 import { api } from "@/lib/api";
 import type { ApiStepResponse } from "@/lib/api";
 import type { AlgorithmId, Arm, SimState } from "@/lib/types";
+import { DEFAULT_HYPERPARAMS } from "@/lib/constants";
 import { create } from "zustand";
 
 interface SettingsPayload {
   arms: Arm[];
   algorithm: AlgorithmId;
-  alpha: number;
-  epsilon: number;
+  hyperparams: Record<string, number>;
 }
 
 interface SimulationStore {
@@ -22,8 +22,7 @@ interface SimulationStore {
   initialize: (
     arms: Arm[],
     algorithm: AlgorithmId,
-    alpha: number,
-    epsilon: number,
+    hyperparams: Record<string, number>,
   ) => Promise<void>;
   step: () => Promise<void>;
   play: () => void;
@@ -54,23 +53,24 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   isLoading: false,
   error: null,
 
-  initialize: async (arms, algorithm, alpha, epsilon) => {
+  initialize: async (arms, algorithm, hyperparams) => {
     const { simId: oldSimId } = get();
     set({ isLoading: true, error: null });
     try {
-      // Clean up old simulation if it exists
       if (oldSimId) {
-        await api.deleteSimulation(oldSimId).catch(() => {
-          /* ignore cleanup errors */
-        });
+        await api.deleteSimulation(oldSimId).catch(() => {});
       }
       const result = await api.createSimulation(
         toSnakeArms(arms),
         algorithm,
-        { alpha, epsilon },
+        hyperparams,
         get().seed,
       );
-      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+      set({
+        simId: result.id,
+        simState: { ...(result.state as SimState), hyperparams: { ...hyperparams }, algorithm },
+        isLoading: false,
+      });
     } catch (e) {
       set({
         isLoading: false,
@@ -113,19 +113,25 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     if (!simState) return;
     set({ isRunning: false, isLoading: true, error: null });
     try {
-      // Clean up old simulation
       if (oldSimId) {
-        await api.deleteSimulation(oldSimId).catch(() => {
-          /* ignore cleanup errors */
-        });
+        await api.deleteSimulation(oldSimId).catch(() => {});
       }
+      const algorithm = algo ?? simState.algorithm;
+      const hyperparams =
+        algorithm === simState.algorithm
+          ? { ...simState.hyperparams }
+          : { ...DEFAULT_HYPERPARAMS[algorithm] };
       const result = await api.createSimulation(
         toSnakeArms(simState.arms),
-        algo ?? simState.algorithm,
-        { alpha: simState.alpha, epsilon: simState.epsilon },
+        algorithm,
+        hyperparams,
         seed,
       );
-      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+      set({
+        simId: result.id,
+        simState: { ...(result.state as SimState), hyperparams: { ...hyperparams }, algorithm },
+        isLoading: false,
+      });
     } catch (e) {
       set({
         isLoading: false,
@@ -138,23 +144,23 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   setSeed: (seed) => set({ seed }),
 
-  applySettings: async ({ arms, algorithm: algo, alpha, epsilon }) => {
+  applySettings: async ({ arms, algorithm: algo, hyperparams }) => {
     const { simId: oldSimId } = get();
     set({ isLoading: true, error: null, isRunning: false });
     try {
-      // Clean up old simulation
       if (oldSimId) {
-        await api.deleteSimulation(oldSimId).catch(() => {
-          /* ignore cleanup errors */
-        });
+        await api.deleteSimulation(oldSimId).catch(() => {});
       }
-      const result = await api.createSimulation(
-        toSnakeArms(arms),
-        algo,
-        { alpha, epsilon },
-        get().seed,
-      );
-      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+      const result = await api.createSimulation(toSnakeArms(arms), algo, hyperparams, get().seed);
+      set({
+        simId: result.id,
+        simState: {
+          ...(result.state as SimState),
+          hyperparams: { ...hyperparams },
+          algorithm: algo,
+        },
+        isLoading: false,
+      });
     } catch (e) {
       set({
         isLoading: false,
