@@ -57,7 +57,7 @@ export interface SimState {
   regretHistory: number[];
 }
 
-export type AlgorithmId = "ucb1" | "epsilon" | "thompson" | "linucb";
+export type AlgorithmId = "ucb1" | "epsilon_greedy" | "thompson" | "linucb";
 
 export interface AlgoMeta {
   label: string;

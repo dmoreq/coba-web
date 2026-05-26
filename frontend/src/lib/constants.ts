@@ -10,7 +10,7 @@ export const ALGO_META: Record<string, AlgoMeta> = {
     light: "#e7f5ff",
     desc: "Optimistic — tries arms with uncertain estimates",
   },
-  epsilon: {
+  epsilon_greedy: {
     label: "ε-Greedy",
     color: "#fd7e14",
     light: "#fff4e6",

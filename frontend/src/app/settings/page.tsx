@@ -155,7 +155,7 @@ export default function SettingsPage() {
                 format={(v) => v.toFixed(1)}
               />
             )}
-            {algorithm === "epsilon" && (
+            {algorithm === "epsilon_greedy" && (
               <Slider
                 label="ε — Exploration probability"
                 value={epsilon}

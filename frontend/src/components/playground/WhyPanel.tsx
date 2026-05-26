@@ -16,7 +16,7 @@ export function WhyPanel({ simState }: WhyPanelProps) {
 
   const textMap: Record<AlgorithmId, string> = {
     ucb1: `${chosen.label} had the highest UCB score: mean(${(s.mean ?? 0).toFixed(3)}) + bonus(${Math.min(s.bonus ?? 0, 9.99).toFixed(3)}) = ${Math.min(s.score ?? 0, 99).toFixed(3)}. The exploration bonus shrinks as n grows \u2014 arm has been pulled ${n} times.`,
-    epsilon: lastStep.wasRandom
+    epsilon_greedy: lastStep.wasRandom
       ? `${chosen.label} was picked randomly (\u03B5-exploration). With \u03B5=${epsilon}, there\u2019s a ${(epsilon * 100).toFixed(0)}% chance each step is random, forcing the algorithm to try underexplored arms.`
       : `${chosen.label} was greedy: it has the highest mean estimate (${(s.mean ?? 0).toFixed(3)}) among all arms. 90% of steps exploit the current best guess.`,
     thompson: `${chosen.label} had the highest Beta sample this step (${(s.sample ?? 0).toFixed(3)}). Arms with fewer observations have wider Beta posteriors and occasionally \u201cwin\u201d the lottery \u2014 this drives natural exploration.`,

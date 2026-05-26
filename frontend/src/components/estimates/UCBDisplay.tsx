@@ -24,7 +24,7 @@ export function UCBDisplay({ simState, showGroundTruth }: UCBDisplayProps) {
 
   const algoLabel: Record<AlgorithmId, string> = {
     ucb1: `UCB1 (\u03B1=${alpha.toFixed(1)})`,
-    epsilon: `\u03B5-Greedy (\u03B5=${simState.epsilon.toFixed(2)})`,
+    epsilon_greedy: `\u03B5-Greedy (\u03B5=${simState.epsilon.toFixed(2)})`,
     thompson: "Thompson Sampling",
     linucb: `LinUCB (\u03B1=${alpha.toFixed(1)})`,
   };
@@ -68,7 +68,7 @@ export function UCBDisplay({ simState, showGroundTruth }: UCBDisplayProps) {
         />
       ))}
 
-      {algorithm !== "thompson" && algorithm !== "epsilon" && (
+      {algorithm !== "thompson" && algorithm !== "epsilon_greedy" && (
         <div className="flex gap-3 mt-[6px] items-center">
           <div className="flex items-center gap-1">
             <div className="w-4 h-[6px] rounded-xs" style={{ background: "#228be6" }} />
