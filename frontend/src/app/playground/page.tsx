@@ -8,33 +8,30 @@ import { EnvPanel } from "@/components/playground/EnvPanel";
 import { StepFeed } from "@/components/playground/StepFeed";
 import { WhyPanel } from "@/components/playground/WhyPanel";
 import { Panel } from "@/components/ui/Panel";
+import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { DEFAULT_ARMS } from "@/lib/constants";
-import type { AlgorithmId } from "@/lib/types";
+import type { AlgorithmId, SimState } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-/** Transform store's SimStateResponse → format components expect */
-function toDisplayState(s: ReturnType<typeof useSimulationStore.getState>["simState"]) {
-  if (!s) {
-    return {
-      arms: DEFAULT_ARMS,
-      armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
-      linMeta: DEFAULT_ARMS.map(() => ({
-        A: [
-          [1, 0],
-          [0, 1],
-        ] as [[number, number], [number, number]],
-        b: [0, 0] as [number, number],
-      })),
-      algorithm: "ucb1" as AlgorithmId,
-      alpha: 2.0,
-      epsilon: 0.1,
-      t: 0,
-      history: [],
-      regretHistory: [],
-    };
-  }
-  return s;
+function defaultDisplay(): SimState {
+  return {
+    arms: DEFAULT_ARMS,
+    armStates: DEFAULT_ARMS.map(() => ({ n: 0, successes: 0, failures: 0 })),
+    linMeta: DEFAULT_ARMS.map(() => ({
+      A: [
+        [1, 0],
+        [0, 1],
+      ] as [[number, number], [number, number]],
+      b: [0, 0] as [number, number],
+    })),
+    algorithm: "ucb1" as AlgorithmId,
+    alpha: 2.0,
+    epsilon: 0.1,
+    t: 0,
+    history: [],
+    regretHistory: [],
+  };
 }
 
 export default function PlaygroundPage() {
@@ -52,35 +49,18 @@ export default function PlaygroundPage() {
   const clearError = useSimulationStore((s) => s.clearError);
 
   const [showGT, setShowGT] = useState(false);
-  const display = toDisplayState(simState);
+  const display = simState ?? defaultDisplay();
+  const initialized = useRef(false);
 
-  // Initialize simulation on mount
+  // Initialize simulation once on mount
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
     initialize(DEFAULT_ARMS, "ucb1", 2.0, 0.1);
   }, [initialize]);
 
-  const handleStep = useCallback(() => {
-    storeStep();
-  }, [storeStep]);
-
-  const handlePlayPause = useCallback(() => {
-    if (isRunning) storePause();
-    else storePlay();
-  }, [isRunning, storePlay, storePause]);
-
-  const handleReset = useCallback((algo?: string) => storeReset(algo as AlgorithmId), [storeReset]);
-
-  // Auto-play via useSimulationRunner
-  useEffect(() => {
-    if (!isRunning) return;
-    const id = setInterval(
-      () => {
-        storeStep();
-      },
-      Math.round(1000 / speed),
-    );
-    return () => clearInterval(id);
-  }, [isRunning, speed, storeStep]);
+  // Async-safe auto-play
+  useSimulationRunner(isRunning, speed, storeStep);
 
   return (
     <PageShell>
@@ -88,6 +68,7 @@ export default function PlaygroundPage() {
         <div className="flex items-center gap-3 px-4 py-2 bg-red-0 border-b border-red-2 text-red-7 text-[13px]">
           <span className="flex-1">{error}</span>
           <button
+            type="button"
             onClick={clearError}
             className="text-red-6 font-semibold cursor-pointer bg-transparent border-none text-[13px]"
           >
@@ -99,9 +80,9 @@ export default function PlaygroundPage() {
         simState={display}
         isRunning={isRunning}
         speed={speed}
-        onPlayPause={handlePlayPause}
-        onStep={handleStep}
-        onReset={handleReset}
+        onPlayPause={() => (isRunning ? storePause() : storePlay())}
+        onStep={storeStep}
+        onReset={(algo) => storeReset(algo as AlgorithmId)}
         onSpeedChange={storeSetSpeed}
       />
       <div className="flex-1 flex overflow-hidden">

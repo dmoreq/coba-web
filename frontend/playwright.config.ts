@@ -15,7 +15,7 @@ export default defineConfig({
       reuseExistingServer: true,
     },
     {
-      command: "pnpm dev --port 3000",
+      command: "cd ../frontend && pnpm dev",
       port: 3000,
       reuseExistingServer: true,
     },
