@@ -18,10 +18,11 @@ class CobaAdapter(ABC):
     @abstractmethod
     def create(
         self,
-        arms: list[ArmConfig],
+        arms: list[ArmConfig] | None,
         algorithm: AlgorithmId,
         hyperparams: dict[str, float],
         seed: int,
+        scenario_id: str = "notification_channels",
     ) -> int: ...
 
     @abstractmethod

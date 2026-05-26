@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -105,7 +107,7 @@ class ContextScenario(BaseModel):
         ..., min_length=2, max_length=8, description="Context feature definitions"
     )
 
-    arms: list[dict[str, str | float]] = Field(
+    arms: list[dict[str, Any]] = Field(
         ...,
         min_length=2,
         max_length=10,

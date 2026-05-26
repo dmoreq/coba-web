@@ -1,6 +1,6 @@
 """
 Adapter wrapping the real `coba` library's ClusterBandit.
-This is the only adapter — InMemoryCobaAdapter removed (always use real coba).
+Scenarios drive context generation, reward functions, and drift dynamics.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import numpy as np
 from coba import ClusterBandit, PolicyType
 
 from coba_server.models.algorithms import ALGORITHM_META
+from coba_server.models.context import ContextScenario
 from coba_server.models.simulation import (
     AlgorithmId,
     ArmConfig,
@@ -21,15 +22,9 @@ from coba_server.models.simulation import (
     StepRecord,
 )
 from coba_server.services.base import CobaAdapter
+from coba_server.services.scenario_registry import get_scenario
 
 MAX_ACTIVE_SIMULATIONS = 100
-
-# Seeded defaults retained for visual continuity in the first three arms.
-DEFAULT_CONTEXTUAL_PROFILES: list[dict[str, Any]] = [
-    {"weights": [-0.4, -0.7], "bias": -0.3},
-    {"weights": [0.8, 0.6], "bias": 0.4},
-    {"weights": [0.1, 0.1], "bias": -0.1},
-]
 MAX_HISTORY_LENGTH = 150
 
 POLICY_MAP: dict[str, PolicyType] = {k: PolicyType(k) for k in ALGORITHM_META}
@@ -72,6 +67,7 @@ CLUSTER_BANDIT_KWARGS = {
 
 
 def _sig(x: float) -> float:
+    """Sigmoid function for reward probability."""
     return float(1 / (1 + np.exp(-x)))
 
 
@@ -86,23 +82,6 @@ def _coerce_hyperparam(name: str, value: float) -> Any:
     if name in BOOL_HYPERPARAMS:
         return bool(value)
     return float(value)
-
-
-def _contextual_profiles(n_arms: int, seed: int) -> list[dict[str, Any]]:
-    """Create deterministic context→reward profiles for any arm count."""
-    profiles = [dict(p) for p in DEFAULT_CONTEXTUAL_PROFILES[:n_arms]]
-    if len(profiles) >= n_arms:
-        return profiles
-
-    rng = np.random.default_rng(seed + 10_000)
-    for _ in range(n_arms - len(profiles)):
-        profiles.append(
-            {
-                "weights": rng.uniform(-1.0, 1.0, size=2).round(6).tolist(),
-                "bias": float(rng.uniform(-0.5, 0.5)),
-            }
-        )
-    return profiles
 
 
 class CobaLibraryAdapter(CobaAdapter):
@@ -122,7 +101,7 @@ class CobaLibraryAdapter(CobaAdapter):
         self._histories: dict[int, list[StepRecord]] = {}
         self._regret_histories: dict[int, list[float]] = {}
         self._seeds: dict[int, int] = {}
-        self._reward_profiles: dict[int, list[dict[str, Any]]] = {}
+        self._scenarios: dict[int, ContextScenario] = {}
 
     def _cluster_bandit_kwargs(
         self, algorithm: AlgorithmId, hyperparams: dict[str, float], seed: int
@@ -142,30 +121,52 @@ class CobaLibraryAdapter(CobaAdapter):
 
     def create(
         self,
-        arms: list[ArmConfig],
+        arms: list[ArmConfig] | None,
         algorithm: AlgorithmId,
         hyperparams: dict[str, float],
         seed: int,
+        scenario_id: str = "notification_channels",
     ) -> int:
         if len(self._bandits) >= MAX_ACTIVE_SIMULATIONS:
             raise ValueError(f"Maximum of {MAX_ACTIVE_SIMULATIONS} active simulations reached")
 
+        # Resolve scenario
+        scenario = get_scenario(scenario_id)
+
+        # Use scenario arms if not provided; otherwise use provided arms
+        if arms is None:
+            arm_dicts = scenario.arms
+            arm_configs = [
+                ArmConfig(
+                    id=arm["id"],
+                    label=arm["label"],
+                    true_prob=arm["true_prob"],
+                    color=arm.get("color"),
+                    light_color=arm.get("light_color"),
+                )
+                for arm in arm_dicts
+            ]
+        else:
+            arm_configs = arms
+
         handle = self._next_handle
         self._next_handle += 1
-        arm_labels = [a.label for a in arms]
+        arm_labels = [a.label for a in arm_configs]
         alpha = hyperparams.get("alpha", 2.0)
         epsilon = hyperparams.get("epsilon", 0.1)
+
+        n_features = scenario.get_feature_count()
         bandit = ClusterBandit(
             arms=arm_labels,
-            n_features=2,
+            n_features=n_features,
             policy=POLICY_MAP.get(algorithm, PolicyType.UCB1),
             **self._cluster_bandit_kwargs(algorithm, hyperparams, seed),
         )
         self._bandits[handle] = bandit
         self._arm_labels[handle] = arm_labels
-        self._arm_configs[handle] = arms
-        self._arm_states[handle] = [ArmState() for _ in arms]
-        self._lin_metas[handle] = [LinMeta() for _ in arms]
+        self._arm_configs[handle] = arm_configs
+        self._arm_states[handle] = [ArmState() for _ in arm_configs]
+        self._lin_metas[handle] = [LinMeta() for _ in arm_configs]
         self._algorithms[handle] = algorithm
         self._alphas[handle] = alpha
         self._epsilons[handle] = epsilon
@@ -173,10 +174,12 @@ class CobaLibraryAdapter(CobaAdapter):
         self._histories[handle] = []
         self._regret_histories[handle] = []
         self._seeds[handle] = seed
-        self._reward_profiles[handle] = _contextual_profiles(len(arms), seed)
+        self._scenarios[handle] = scenario
+
         return handle
 
     def get_state(self, handle: int) -> SimState:
+        scenario = self._scenarios[handle]
         return SimState(
             arms=self._arm_configs[handle],
             arm_states=self._arm_states[handle],
@@ -184,6 +187,9 @@ class CobaLibraryAdapter(CobaAdapter):
             algorithm=self._algorithms[handle],
             alpha=self._alphas[handle],
             epsilon=self._epsilons[handle],
+            scenario_id=scenario.id,
+            feature_names=[f.name for f in scenario.features],
+            feature_labels=[f.label for f in scenario.features],
             t=self._ts[handle],
             history=list(self._histories[handle]),
             regret_history=list(self._regret_histories[handle]),
@@ -212,18 +218,109 @@ class CobaLibraryAdapter(CobaAdapter):
             )
         return scores
 
-    def _true_probabilities(
-        self, handle: int, context: np.ndarray
-    ) -> tuple[list[float], int, float]:
-        arms = self._arm_configs[handle]
-        algorithm = self._algorithms[handle]
-        if algorithm in CONTEXTUAL_ALGORITHMS:
-            probs = [
-                _sig(float(np.dot(profile["weights"], context) + profile["bias"]))
-                for profile in self._reward_profiles[handle]
-            ]
+    def _sample_context(
+        self, handle: int, rng: np.random.Generator
+    ) -> tuple[np.ndarray, str | None]:
+        """
+        Sample a context vector from the scenario distribution.
+        Returns (context_vector, segment_name).
+        """
+        scenario = self._scenarios[handle]
+        n_features = scenario.get_feature_count()
+
+        segment_name: str | None = None
+
+        if scenario.population_segments:
+            # Sample a segment by weight
+            weights = [s.weight for s in scenario.population_segments]
+            total_weight = sum(weights)
+            normalized_weights = [w / total_weight for w in weights]
+            segment_idx = rng.choice(len(scenario.population_segments), p=normalized_weights)
+            segment = scenario.population_segments[segment_idx]
+            segment_name = segment.name
+
+            # Sample from the segment's distribution
+            context = np.array(
+                [
+                    np.clip(
+                        rng.normal(segment.context_mean[i], segment.context_std[i]),
+                        scenario.features[i].min_val,
+                        scenario.features[i].max_val,
+                    )
+                    for i in range(n_features)
+                ]
+            )
         else:
-            probs = [float(a.true_prob) for a in arms]
+            # Uniform over feature ranges
+            context = np.array(
+                [
+                    rng.uniform(scenario.features[i].min_val, scenario.features[i].max_val)
+                    for i in range(n_features)
+                ]
+            )
+
+        return context, segment_name
+
+    def _get_reward_weights(self, handle: int, arm_idx: int, t: int) -> tuple[list[float], float]:
+        """
+        Get the reward weights (and bias) for an arm, accounting for drift.
+        Returns (weights, bias).
+        """
+        scenario = self._scenarios[handle]
+        profile = scenario.reward_profiles[arm_idx]
+
+        if not scenario.drift_config:
+            # No drift: return profile as-is
+            return profile.weights, profile.bias
+
+        # Drift logic: interpolate between initial and target profiles
+        drift = scenario.drift_config
+        if t < drift.drift_step:
+            # Before drift: use initial profiles
+            return profile.weights, profile.bias
+        elif t >= drift.drift_step + drift.drift_duration:
+            # After drift complete: use target profiles
+            target_profile = drift.target_profiles[arm_idx]
+            return target_profile.weights, target_profile.bias
+        else:
+            # During drift: linearly interpolate
+            progress = (t - drift.drift_step) / drift.drift_duration
+            initial_weights = profile.weights
+            target_weights = drift.target_profiles[arm_idx].weights
+            initial_bias = profile.bias
+            target_bias = drift.target_profiles[arm_idx].bias
+
+            interpolated_weights = [
+                initial_weights[i] * (1 - progress) + target_weights[i] * progress
+                for i in range(len(initial_weights))
+            ]
+            interpolated_bias = initial_bias * (1 - progress) + target_bias * progress
+
+            return interpolated_weights, interpolated_bias
+
+    def _true_probabilities(
+        self, handle: int, context: np.ndarray, t: int
+    ) -> tuple[list[float], int, float]:
+        """
+        Compute true reward probabilities for each arm given a context,
+        accounting for drift.
+        Returns (probabilities, optimal_arm_idx, optimal_probability).
+        """
+        arm_configs = self._arm_configs[handle]
+        algorithm = self._algorithms[handle]
+
+        if algorithm in CONTEXTUAL_ALGORITHMS:
+            # Compute probabilities from scenario reward profiles
+            probs = []
+            for i in range(len(arm_configs)):
+                weights, bias = self._get_reward_weights(handle, i, t)
+                logit = float(np.dot(weights, context) + bias)
+                prob = _sig(logit)
+                probs.append(prob)
+        else:
+            # Context-free: use arm.true_prob
+            probs = [float(a.true_prob) for a in arm_configs]
+
         optimal_idx = int(np.argmax(probs))
         return probs, optimal_idx, float(probs[optimal_idx])
 
@@ -236,14 +333,16 @@ class CobaLibraryAdapter(CobaAdapter):
         rng = np.random.default_rng(self._seeds[handle])
         self._seeds[handle] += 1
         t = self._ts[handle] + 1
-        context = np.array([rng.uniform(-1, 1), rng.uniform(-1, 1)])
+
+        # Sample context
+        context, context_segment = self._sample_context(handle, rng)
 
         dec = bandit.decide(context)
         chosen_label = dec.chosen_arm
         chosen_idx = arm_labels.index(chosen_label) if chosen_label else 0
 
         scores = self._build_scores(dec, arm_labels)
-        true_probs, optimal_idx, optimal_prob = self._true_probabilities(handle, context)
+        true_probs, optimal_idx, optimal_prob = self._true_probabilities(handle, context, t)
         true_prob = true_probs[chosen_idx]
 
         outcome = 1.0 if rng.random() < true_prob else 0.0
@@ -281,6 +380,7 @@ class CobaLibraryAdapter(CobaAdapter):
             cum_regret=float(cum_regret),
             scores=scores,
             context=context.tolist() if algorithm in CONTEXTUAL_ALGORITHMS else None,
+            context_segment=context_segment,
             was_random=bool(dec.was_random),
             true_prob=float(true_prob),
             optimal_idx=optimal_idx,
@@ -305,7 +405,7 @@ class CobaLibraryAdapter(CobaAdapter):
         context = (
             np.array(history[-1].context, dtype=float)
             if history and history[-1].context is not None
-            else np.zeros(2, dtype=float)
+            else np.zeros(self._scenarios[handle].get_feature_count(), dtype=float)
         )
         return {
             "policy": bandit.policy.value,
@@ -329,7 +429,7 @@ class CobaLibraryAdapter(CobaAdapter):
             self._histories,
             self._regret_histories,
             self._seeds,
-            self._reward_profiles,
+            self._scenarios,
         ):
             d.pop(handle, None)
 

@@ -57,6 +57,7 @@ class StepRecord(BaseModel):
     cum_regret: float
     scores: list[Score]
     context: list[float] | None = None
+    context_segment: str | None = None
     was_random: bool
     true_prob: float
     optimal_idx: int | None = None
@@ -77,6 +78,9 @@ class SimState(BaseModel):
     algorithm: AlgorithmId = "ucb1"
     alpha: float = 2.0
     epsilon: float = 0.1
+    scenario_id: str | None = None
+    feature_names: list[str] = Field(default_factory=list)
+    feature_labels: list[str] = Field(default_factory=list)
     history: list[StepRecord] = Field(default_factory=list)
     regret_history: list[float] = Field(default_factory=list)
 
@@ -86,13 +90,15 @@ class Simulation(BaseModel):
     state: SimState
     algorithm: AlgorithmId
     seed: int = 42
+    scenario_id: str | None = None
 
 
 class CreateSimRequest(BaseModel):
-    arms: list[ArmConfig] = Field(min_length=2, max_length=10)
+    arms: list[ArmConfig] | None = None
     algorithm: AlgorithmId = "ucb1"
     hyperparams: dict[str, float] = Field(default_factory=dict)
     seed: int = 42
+    scenario_id: str = "notification_channels"
 
 
 class StepResponse(BaseModel):

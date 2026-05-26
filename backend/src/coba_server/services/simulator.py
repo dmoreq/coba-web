@@ -38,9 +38,13 @@ class SimulationService:
 
     def create(self, req: CreateSimRequest) -> Simulation:
         self.prune_expired()
-        handle = self._adapter.create(req.arms, req.algorithm, req.hyperparams, req.seed)
+        handle = self._adapter.create(
+            req.arms, req.algorithm, req.hyperparams, req.seed, req.scenario_id
+        )
         state = self._adapter.get_state(handle)
-        sim = Simulation(state=state, algorithm=req.algorithm, seed=req.seed)
+        sim = Simulation(
+            state=state, algorithm=req.algorithm, seed=req.seed, scenario_id=req.scenario_id
+        )
         self._simulations[sim.id] = sim
         self._handle_map[sim.id] = handle
         self._created_at[sim.id] = time.time()

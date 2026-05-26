@@ -37,22 +37,22 @@ def adapter():
 
 class TestCobaLibraryAdapter:
     def test_create_returns_handle(self, adapter):
-        assert adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42) == 0
+        assert adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels") == 0
 
     def test_get_state_returns_sim_state(self, adapter):
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels")
         st = adapter.get_state(h)
         assert st.t == 0 and len(st.arm_states) == 2
 
     def test_step_increments_t(self, adapter):
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels")
         r = adapter.step(h)
         assert r.t == 1 and adapter.get_state(h).t == 1
 
     def test_step_supports_all_cluster_bandit_algorithms(self, adapter):
         """Every discrete ClusterBandit policy exposed by coba must complete a step."""
         for algo in CLUSTER_BANDIT_ALGORITHMS:
-            h = adapter.create(TWO_ARMS, algo, {}, 42)
+            h = adapter.create(TWO_ARMS, algo, {}, 42, "notification_channels")
             assert adapter._bandits[h].policy.value == algo
             r = adapter.step(h)
             assert r.outcome in (0, 1), f"{algo}: outcome must be binary"
@@ -63,7 +63,7 @@ class TestCobaLibraryAdapter:
             ArmConfig(id="a", label="A", true_prob=0.3),
             ArmConfig(id="b", label="B", true_prob=0.7),
         ]
-        h = adapter.create(arms, "epsilon_greedy", {"epsilon": 0.6}, 42)
+        h = adapter.create(arms, "epsilon_greedy", {"epsilon": 0.6}, 42, "notification_channels")
         was_random_steps = []
         for _ in range(40):
             r = adapter.step(h)
@@ -73,7 +73,7 @@ class TestCobaLibraryAdapter:
 
     def test_scores_have_finite_values(self, adapter):
         """Scores must cap inf at 99.0 and never be truly infinite in the response."""
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels")
         for _ in range(5):
             r = adapter.step(h)
         for score in r.scores:
@@ -82,7 +82,7 @@ class TestCobaLibraryAdapter:
     def test_linucb_supports_more_than_three_arms(self, adapter):
         """Contextual reward profiles must be generated for all configured arms."""
         arms = [ArmConfig(id=str(i), label=f"A{i}", true_prob=0.1 + 0.05 * i) for i in range(6)]
-        h = adapter.create(arms, "linucb", {"alpha": 2.0}, 42)
+        h = adapter.create(arms, "linucb", {"alpha": 2.0}, 42, "notification_channels")
         for _ in range(12):
             r = adapter.step(h)
             assert 0 <= r.chosen_idx < len(arms)
@@ -93,7 +93,7 @@ class TestCobaLibraryAdapter:
 
     def test_chosen_arm_score_uses_coba_breakdown(self, adapter):
         """Chosen-arm score should use coba's BanditDecision score_breakdown."""
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels")
         for _ in range(10):
             r = adapter.step(h)
         chosen_score = r.scores[r.chosen_idx]
@@ -105,7 +105,7 @@ class TestCobaLibraryAdapter:
         """regret_history must not grow beyond MAX_HISTORY_LENGTH entries."""
         from coba_server.services.coba_adapter_real import MAX_HISTORY_LENGTH
 
-        h = adapter.create(TWO_ARMS, "ucb1", {}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {}, 42, "notification_channels")
         for _ in range(MAX_HISTORY_LENGTH + 50):
             adapter.step(h)
         st = adapter.get_state(h)
@@ -113,7 +113,7 @@ class TestCobaLibraryAdapter:
         assert len(st.history) <= MAX_HISTORY_LENGTH
 
     def test_delete_cleans_up(self, adapter):
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42, "notification_channels")
         adapter.delete(h)
         with pytest.raises(KeyError):
             adapter.get_state(h)
@@ -125,7 +125,7 @@ class TestCobaLibraryAdapter:
             ArmConfig(id="b", label="B", true_prob=0.5),
             ArmConfig(id="c", label="C", true_prob=0.7),
         ]
-        h = adapter.create(arms, "linucb", {"alpha": 2.0}, 42)
+        h = adapter.create(arms, "linucb", {"alpha": 2.0}, 42, "notification_channels")
         chosen_idxs = set()
         for _ in range(9):  # 3 arms × 3 rounds should cover all
             r = adapter.step(h)
@@ -148,69 +148,75 @@ class TestHyperparamsPassthrough:
         using empty hyperparams.
         """
         for algo in CLUSTER_BANDIT_ALGORITHMS:
-            h = adapter.create(TWO_ARMS, algo, {}, 42)
+            h = adapter.create(TWO_ARMS, algo, {}, 42, "notification_channels")
             r = adapter.step(h)
             assert r.t == 1, f"{algo}: step must succeed with empty hyperparams"
 
     def test_n_clusters_respected(self, adapter):
         """Cluster count should be configurable — full hyperparams bag."""
-        h = adapter.create(TWO_ARMS, "linucb", {"n_clusters": 3, "alpha": 2.0}, 42)
+        h = adapter.create(
+            TWO_ARMS, "linucb", {"n_clusters": 3, "alpha": 2.0}, 42, "notification_channels"
+        )
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_alpha_respected_ucb1(self, adapter):
         """UCB1 accepts alpha hyperparameter."""
-        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 5.0}, 42)
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 5.0}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_l2_lambda_respected_linucb(self, adapter):
         """LinUCB accepts l2_lambda hyperparameter."""
-        h = adapter.create(TWO_ARMS, "linucb", {"l2_lambda": 0.5}, 42)
+        h = adapter.create(TWO_ARMS, "linucb", {"l2_lambda": 0.5}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_gamma_respected_linucb(self, adapter):
         """LinUCB accepts gamma hyperparameter."""
-        h = adapter.create(TWO_ARMS, "linucb", {"gamma": 0.9}, 42)
+        h = adapter.create(TWO_ARMS, "linucb", {"gamma": 0.9}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_v_sq_respected_lints(self, adapter):
         """LinTS accepts v_sq hyperparameter."""
-        h = adapter.create(TWO_ARMS, "lints", {"v_sq": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "lints", {"v_sq": 2.0}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_n_bootstraps_respected(self, adapter):
         """Bootstrapped TS accepts n_bootstraps hyperparameter."""
-        h = adapter.create(TWO_ARMS, "bootstrapped_ts", {"n_bootstraps": 5}, 42)
+        h = adapter.create(
+            TWO_ARMS, "bootstrapped_ts", {"n_bootstraps": 5}, 42, "notification_channels"
+        )
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_linucb_sw_accepts_basic_params(self, adapter):
         """Sliding-window LinUCB works with valid ClusterBandit params."""
-        h = adapter.create(TWO_ARMS, "linucb_sw", {"alpha": 2.0}, 42)
+        h = adapter.create(TWO_ARMS, "linucb_sw", {"alpha": 2.0}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_softmax_accepts_basic_params(self, adapter):
         """Softmax works with valid ClusterBandit params."""
-        h = adapter.create(TWO_ARMS, "softmax", {}, 42)
+        h = adapter.create(TWO_ARMS, "softmax", {}, 42, "notification_channels")
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
 
     def test_rf_accepts_basic_params(self, adapter):
         """Random Forest works with valid ClusterBandit params."""
-        h = adapter.create(TWO_ARMS, "random_forest_ucb", {"alpha": 2.0}, 42)
+        h = adapter.create(
+            TWO_ARMS, "random_forest_ucb", {"alpha": 2.0}, 42, "notification_channels"
+        )
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
@@ -227,6 +233,7 @@ class TestHyperparamsPassthrough:
                 "gp_max_obs": 300,
             },
             42,
+            "notification_channels",
         )
         for _ in range(5):
             adapter.step(h)
@@ -242,6 +249,7 @@ class TestHyperparamsPassthrough:
                 "neural_retrain_freq": 100,
             },
             42,
+            "notification_channels",
         )
         for _ in range(5):
             adapter.step(h)
@@ -249,7 +257,13 @@ class TestHyperparamsPassthrough:
 
     def test_n_bootstraps_respected_linucb_sw(self, adapter):
         """Sliding-window LinUCB with n_bootstraps works."""
-        h = adapter.create(TWO_ARMS, "linucb_sw", {"alpha": 2.0, "n_bootstraps": 5}, 42)
+        h = adapter.create(
+            TWO_ARMS,
+            "linucb_sw",
+            {"alpha": 2.0, "n_bootstraps": 5},
+            42,
+            "notification_channels",
+        )
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
