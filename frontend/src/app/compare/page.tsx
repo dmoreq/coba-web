@@ -7,6 +7,7 @@ import { AlgorithmSelector } from "@/components/shared/AlgorithmSelector";
 import { PlaybackControls } from "@/components/shared/PlaybackControls";
 import { SpeedSelector } from "@/components/shared/SpeedSelector";
 import { TruthToggle } from "@/components/shared/TruthToggle";
+import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { api } from "@/lib/api";
 import type { SimStateResponse } from "@/lib/api";
 import { ALGO_META } from "@/lib/constants";
@@ -24,11 +25,11 @@ export default function ComparePage() {
   const [algoB, setAlgoB] = useState<AlgorithmId>("thompson");
   const [simA, setSimA] = useState<SimStateResponse | null>(null);
   const [simB, setSimB] = useState<SimStateResponse | null>(null);
-  const [isRunning, setIsRunning] = useState(false);
-  const [speed, setSpeed] = useState(2);
   const [showGT, setShowGT] = useState(false);
   const [ids, setIds] = useState<{ a: string; b: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [speed, setSpeed] = useState(2);
 
   const initSims = useCallback(async (algoAval: AlgorithmId, algoBval: AlgorithmId) => {
     setError(null);
@@ -96,11 +97,8 @@ export default function ComparePage() {
     setIsRunning(false);
   }, []);
 
-  useEffect(() => {
-    if (!isRunning || !ids) return;
-    const id = setInterval(handleStep, Math.round(1000 / speed));
-    return () => clearInterval(id);
-  }, [isRunning, speed, handleStep, ids]);
+  // Use the same simulation runner pattern as Playground to avoid race conditions
+  useSimulationRunner(isRunning, speed, handleStep);
 
   const dsA = simA ?? {
     arms: DEFAULT_ARMS,
@@ -161,7 +159,7 @@ export default function ComparePage() {
           onStep={handleStep}
           onPlayPause={() => setIsRunning((r) => !r)}
         />
-        <SpeedSelector speeds={[1, 2, 5]} value={speed} onChange={setSpeed} />
+        <SpeedSelector speeds={[1, 2, 5, 10]} value={speed} onChange={setSpeed} />
         <button
           type="button"
           onClick={handleReset}
