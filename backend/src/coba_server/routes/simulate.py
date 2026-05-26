@@ -24,7 +24,10 @@ async def create_simulation(
     req: CreateSimRequest,
     service: SimulationService = Depends(get_simulation_service),
 ) -> Simulation:
-    return service.create(req)
+    try:
+        return await asyncio.to_thread(service.create, req)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/{sim_id}")
@@ -32,7 +35,7 @@ async def get_simulation(
     sim_id: UUID,
     service: SimulationService = Depends(get_simulation_service),
 ) -> Simulation:
-    sim = service.get(sim_id)
+    sim = await asyncio.to_thread(service.get, sim_id)
     if not sim:
         raise HTTPException(status_code=404, detail="Simulation not found")
     return sim
@@ -43,19 +46,25 @@ async def step_simulation(
     sim_id: UUID,
     service: SimulationService = Depends(get_simulation_service),
 ) -> StepResponse:
-    try:
-        record = service.step(sim_id)
+    def _step() -> StepResponse | None:
+        try:
+            record = service.step(sim_id)
+        except ValueError:
+            return None
         sim = service.get(sim_id)
         if not sim:
-            raise HTTPException(status_code=404, detail="Simulation not found")
+            return None
         return StepResponse(
             t=record.t,
             step=record,
             arm_states=sim.state.arm_states,
             regret_history=list(sim.state.regret_history),
         )
-    except ValueError:
+
+    result = await asyncio.to_thread(_step)
+    if result is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
+    return result
 
 
 @router.post("/{sim_id}/run")
@@ -65,7 +74,6 @@ async def run_simulation(
     service: SimulationService = Depends(get_simulation_service),
 ) -> RunResponse:
     try:
-        # Run CPU-bound steps in thread pool to avoid blocking event loop
         return await asyncio.to_thread(service.run, sim_id, req.steps)
     except ValueError:
         raise HTTPException(status_code=404, detail="Simulation not found")
@@ -76,7 +84,7 @@ async def delete_simulation(
     sim_id: UUID,
     service: SimulationService = Depends(get_simulation_service),
 ) -> None:
-    service.delete(sim_id)
+    await asyncio.to_thread(service.delete, sim_id)
 
 
 @router.get("/{sim_id}/coba-state")
@@ -85,7 +93,7 @@ async def get_coba_state(
     service: SimulationService = Depends(get_simulation_service),
 ) -> dict:
     try:
-        return service.get_coba_state(sim_id)
+        return await asyncio.to_thread(service.get_coba_state, sim_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -96,6 +104,6 @@ async def get_results(
     service: SimulationService = Depends(get_simulation_service),
 ) -> ResultsResponse:
     try:
-        return service.get_results(sim_id)
+        return await asyncio.to_thread(service.get_results, sim_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Simulation not found")

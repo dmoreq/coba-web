@@ -25,8 +25,8 @@ class SimulationService:
         self._handle_map: dict[UUID, int] = {}
         self._created_at: dict[UUID, float] = {}
 
-    def _prune_expired(self) -> None:
-        """Remove simulations older than TTL_SECONDS."""
+    def prune_expired(self) -> None:
+        """Remove simulations older than TTL_SECONDS (public)."""
         now = time.time()
         expired = [
             sim_id
@@ -37,7 +37,7 @@ class SimulationService:
             self.delete(sim_id)
 
     def create(self, req: CreateSimRequest) -> Simulation:
-        self._prune_expired()
+        self.prune_expired()
         handle = self._adapter.create(req.arms, req.algorithm, req.hyperparams, req.seed)
         state = self._adapter.get_state(handle)
         sim = Simulation(state=state, algorithm=req.algorithm, seed=req.seed)

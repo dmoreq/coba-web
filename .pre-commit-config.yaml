@@ -7,6 +7,10 @@ repos:
         name: trim trailing whitespace
       - id: end-of-file-fixer
         name: fix end of file
+        exclude: |
+          (?x)^(
+            frontend/tsconfig\.tsbuildinfo
+          )
       - id: detect-private-key
         name: detect private keys
       - id: mixed-line-ending

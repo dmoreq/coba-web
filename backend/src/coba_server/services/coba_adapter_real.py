@@ -22,6 +22,8 @@ from coba_server.models.simulation import (
 )
 from coba_server.services.base import CobaAdapter
 
+MAX_ACTIVE_SIMULATIONS = 100
+
 # Seeded defaults retained for visual continuity in the first three arms.
 DEFAULT_CONTEXTUAL_PROFILES: list[dict[str, Any]] = [
     {"weights": [-0.4, -0.7], "bias": -0.3},
@@ -152,6 +154,9 @@ class CobaLibraryAdapter(CobaAdapter):
         hyperparams: dict[str, float],
         seed: int,
     ) -> int:
+        if len(self._bandits) >= MAX_ACTIVE_SIMULATIONS:
+            raise ValueError(f"Maximum of {MAX_ACTIVE_SIMULATIONS} active simulations reached")
+
         handle = self._next_handle
         self._next_handle += 1
         arm_labels = [a.label for a in arms]
