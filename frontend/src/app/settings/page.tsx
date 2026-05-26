@@ -27,6 +27,12 @@ export default function SettingsPage() {
     setArms((prev) => prev.map((a, i) => (i === idx ? { ...a, trueProb: val } : a)));
   };
 
+  const handleArmLabelChange = (idx: number, label: string) => {
+    setArms((prev) =>
+      prev.map((a, i) => (i === idx ? { ...a, label: label || a.id } : a)),
+    );
+  };
+
   const handleAddArm = () => {
     if (arms.length >= 6) return;
     const idx = arms.length - 3;
@@ -76,9 +82,13 @@ export default function SettingsPage() {
                   className="w-[10px] h-[10px] rounded-full flex-shrink-0"
                   style={{ background: arm.color }}
                 />
-                <div className="w-[56px] text-[13px] font-medium text-gray-8 flex-shrink-0">
-                  {arm.label}
-                </div>
+                <input
+                  type="text"
+                  value={arm.label}
+                  onChange={(e) => handleArmLabelChange(i, e.target.value)}
+                  className="w-[56px] text-[13px] font-medium flex-shrink-0 bg-transparent border-none outline-none cursor-text"
+                  style={{ color: arm.color }}
+                />
                 <div className="flex-1">
                   <input
                     type="range"

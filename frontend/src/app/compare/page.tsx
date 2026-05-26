@@ -147,7 +147,7 @@ export default function ComparePage() {
           onStep={handleStep}
           onPlayPause={() => setIsRunning((r) => !r)}
         />
-        <SpeedSelector speeds={[1, 2, 5, 10]} value={speed} onChange={setSpeed} />
+        <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={setSpeed} />
         <button
           type="button"
           onClick={handleReset}
@@ -176,7 +176,7 @@ export default function ComparePage() {
           })}
         </div>
 
-        <div className="flex gap-3 items-start">
+        <div className="flex gap-3">
           {([dsA, dsB] as const).map((ds, i) => {
             const cumRegret = ds.regretHistory[ds.regretHistory.length - 1] || 0;
             const avgReward =
@@ -209,19 +209,19 @@ export default function ComparePage() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                       Cumulative Regret
                     </div>
-                    <RegretLineChart regretHistory={ds.regretHistory} width={180} height={90} />
+                    <RegretLineChart regretHistory={ds.regretHistory} height={160} />
                   </div>
                   <div className="flex-1 bg-white border border-gray-3 rounded-md p-lg">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                       Cumulative Rewards
                     </div>
-                    <CumRewardsChart history={ds.history} width={180} height={90} />
+                    <CumRewardsChart history={ds.history} height={160} />
                   </div>
                   <div className="flex-1 bg-white border border-gray-3 rounded-md p-lg">
                     <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                       Pull Distribution
                     </div>
-                    <PullDistChart arms={ds.arms} armStates={ds.armStates} width={180} height={90} />
+                    <PullDistChart arms={ds.arms} armStates={ds.armStates} height={160} />
                   </div>
                 </div>
               </div>
@@ -261,7 +261,7 @@ export default function ComparePage() {
             labelA={ALGO_META[algoA]?.label}
             labelB={ALGO_META[algoB]?.label}
             width={660}
-            height={140}
+            height={200}
           />
         </div>
       </div>

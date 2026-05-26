@@ -57,7 +57,7 @@ export const DEFAULT_ARMS: Arm[] = [
 
 /** Default simulation constants */
 export const DEFAULT_SEED = 42;
-export const DEFAULT_SPEED = 2;
+export const DEFAULT_SPEED = 0.5;
 export const DEFAULT_ALPHA = 2.0;
 export const DEFAULT_EPSILON = 0.1;
 export const MAX_HISTORY_LENGTH = 150;

@@ -49,7 +49,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   simId: null,
   simState: null,
   isRunning: false,
-  speed: 2,
+  speed: 0.5,
   seed: 42,
   isLoading: false,
   error: null,

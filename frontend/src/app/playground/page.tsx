@@ -89,20 +89,24 @@ export default function PlaygroundPage() {
           </Panel>
           {display.history.length > 0 && <WhyPanel simState={display} />}
           <div className="flex gap-[10px]">
-            <Panel title="Cumulative Regret">
-              <RegretLineChart regretHistory={display.regretHistory} width={380} height={120} />
-            </Panel>
-            <Panel title="Cumulative Rewards">
-              <CumRewardsChart history={display.history} width={380} height={120} />
-            </Panel>
-            <Panel title="Pull Distribution">
-              <PullDistChart
-                arms={display.arms}
-                armStates={display.armStates}
-                width={220}
-                height={120}
-              />
-            </Panel>
+            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                Cumulative Regret
+              </div>
+              <RegretLineChart regretHistory={display.regretHistory} height={180} />
+            </div>
+            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                Cumulative Rewards
+              </div>
+              <CumRewardsChart history={display.history} height={180} />
+            </div>
+            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                Pull Distribution
+              </div>
+              <PullDistChart arms={display.arms} armStates={display.armStates} height={180} />
+            </div>
           </div>
         </div>
       </div>

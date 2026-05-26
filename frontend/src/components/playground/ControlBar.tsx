@@ -30,7 +30,7 @@ export function ControlBar({
       <AlgorithmSelector selected={simState.algorithm} onChange={(a) => onReset(a)} />
       <div className="flex-1 min-w-[8px]" />
       <PlaybackControls isRunning={isRunning} onStep={onStep} onPlayPause={onPlayPause} />
-      <SpeedSelector speeds={[1, 2, 5, 10]} value={speed} onChange={onSpeedChange} />
+      <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={onSpeedChange} />
       <div className="flex items-center gap-sm">
         <span className="text-[12px] text-gray-6 font-mono bg-gray-0 px-sm py-[3px] rounded-xs">
           t={simState.t}

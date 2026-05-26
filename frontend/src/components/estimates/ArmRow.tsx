@@ -21,7 +21,7 @@ export function ArmRow({
   showGroundTruth,
 }: ArmRowProps) {
   const { mean = 0, bonus = 0, sample } = score ?? {};
-  const barMax = algorithm === "linucb" ? Math.max(maxScore * 1.1, 1) : 1;
+  const barMax = Math.max(maxScore * 1.1, 1);
 
   const meanPct = Math.min((mean / barMax) * 100, 100);
   const bonusPct =
