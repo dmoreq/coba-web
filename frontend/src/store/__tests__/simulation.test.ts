@@ -130,9 +130,7 @@ describe("simulation store", () => {
       n_clusters: 5,
     });
     expect(api.createSimulation).toHaveBeenCalledWith(
-      expect.arrayContaining([
-        expect.objectContaining({ true_prob: 0.3 }),
-      ]),
+      expect.arrayContaining([expect.objectContaining({ true_prob: 0.3 })]),
       "linucb",
       { alpha: 2.0, l2_lambda: 1.0, gamma: 1.0, n_clusters: 5 },
       expect.any(Number),
@@ -265,13 +263,11 @@ describe("simulation store", () => {
 
   it("applySettings creates new simulation", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
-    await useSimulationStore
-      .getState()
-      .applySettings({
-        arms: mockArms,
-        algorithm: "thompson",
-        hyperparams: { alpha: 1.5, epsilon: 0.2 },
-      });
+    await useSimulationStore.getState().applySettings({
+      arms: mockArms,
+      algorithm: "thompson",
+      hyperparams: { alpha: 1.5, epsilon: 0.2 },
+    });
     expect(api.createSimulation).toHaveBeenCalledTimes(1);
     expect(api.createSimulation).toHaveBeenCalledWith(
       expect.any(Array),

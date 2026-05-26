@@ -1,9 +1,9 @@
 "use client";
 
-import { memo } from "react";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import { CHART_THEME } from "@/lib/chart-theme";
 import type { Arm, ArmState } from "@/lib/types";
+import { memo } from "react";
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface PullDistChartProps {

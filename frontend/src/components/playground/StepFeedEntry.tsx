@@ -1,5 +1,5 @@
-import { memo } from "react";
 import type { Arm, StepRecord } from "@/lib/types";
+import { memo } from "react";
 
 interface StepFeedEntryProps {
   step: StepRecord;

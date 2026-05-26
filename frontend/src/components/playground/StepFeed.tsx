@@ -1,7 +1,7 @@
 "use client";
 
-import { memo, useMemo } from "react";
 import type { Arm, StepRecord } from "@/lib/types";
+import { memo, useMemo } from "react";
 import { StepFeedEntry } from "./StepFeedEntry";
 
 interface StepFeedProps {

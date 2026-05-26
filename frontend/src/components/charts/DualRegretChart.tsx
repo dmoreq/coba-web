@@ -1,8 +1,8 @@
 "use client";
 
-import { memo } from "react";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import { CHART_THEME } from "@/lib/chart-theme";
+import { memo } from "react";
 import {
   CartesianGrid,
   Legend,

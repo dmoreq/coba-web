@@ -1,8 +1,8 @@
 "use client";
 
-import { memo, useState } from "react";
 import { ALGO_META } from "@/lib/constants";
 import type { AlgorithmId, SimState } from "@/lib/types";
+import { memo, useState } from "react";
 import { ArmRow } from "./ArmRow";
 import { FormulaPanel } from "./FormulaPanel";
 

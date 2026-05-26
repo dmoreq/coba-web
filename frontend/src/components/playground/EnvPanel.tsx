@@ -1,8 +1,8 @@
 "use client";
 
 import { TruthToggle } from "@/components/shared/TruthToggle";
-import { memo } from "react";
 import type { SimState } from "@/lib/types";
+import { memo } from "react";
 
 interface EnvPanelProps {
   simState: SimState;

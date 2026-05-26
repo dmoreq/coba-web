@@ -1,10 +1,10 @@
 "use client";
 
-import { memo } from "react";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import { CHART_THEME } from "@/lib/chart-theme";
 import { MAX_HISTORY_LENGTH } from "@/lib/constants";
 import type { StepRecord } from "@/lib/types";
+import { memo } from "react";
 import {
   Area,
   CartesianGrid,

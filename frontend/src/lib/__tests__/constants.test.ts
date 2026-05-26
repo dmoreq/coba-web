@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import {
-  ALGO_META,
   ALGORITHM_ORDER,
+  ALGO_META,
   DEFAULT_HYPERPARAMS,
   HYPERPARAM_META,
   createDefaultSimState,
 } from "@/lib/constants";
+import { describe, expect, it } from "vitest";
 
 describe("ALGO_META", () => {
   it("has exactly 16 algorithms", () => {
@@ -30,11 +30,7 @@ describe("ALGORITHM_ORDER", () => {
   });
 
   it("starts with context-free algorithms", () => {
-    expect(ALGORITHM_ORDER.slice(0, 3)).toEqual([
-      "ucb1",
-      "thompson",
-      "epsilon_greedy",
-    ]);
+    expect(ALGORITHM_ORDER.slice(0, 3)).toEqual(["ucb1", "thompson", "epsilon_greedy"]);
   });
 });
 

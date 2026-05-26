@@ -17,9 +17,9 @@ import { api } from "@/lib/api";
 import type { ApiRunResponse, SimStateResponse } from "@/lib/api";
 import {
   ALGO_META,
+  DEFAULT_ARMS,
   DEFAULT_HYPERPARAMS,
   createDefaultSimState,
-  DEFAULT_ARMS,
 } from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
 import { useCallback, useEffect, useRef, useState } from "react";

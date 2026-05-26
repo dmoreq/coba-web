@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import type { ApiStepResponse } from "@/lib/api";
-import type { AlgorithmId, Arm, SimState } from "@/lib/types";
 import { DEFAULT_HYPERPARAMS } from "@/lib/constants";
+import type { AlgorithmId, Arm, SimState } from "@/lib/types";
 import { create } from "zustand";
 
 interface SettingsPayload {

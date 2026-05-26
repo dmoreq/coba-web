@@ -3,8 +3,8 @@
 import { PageShell } from "@/components/layout/PageShell";
 import { Slider } from "@/components/ui/Slider";
 import {
-  ALGO_META,
   ALGORITHM_ORDER,
+  ALGO_META,
   DEFAULT_ARMS,
   DEFAULT_HYPERPARAMS,
   HYPERPARAM_META,
