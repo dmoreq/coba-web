@@ -80,7 +80,23 @@ class TestDelete:
 class TestAlgorithms:
     def test_returns_list(self, client):
         data = client.get("/api/algorithms").json()
-        assert len(data) >= 4 and "ucb1" in [a["id"] for a in data]
+        ids = [a["id"] for a in data]
+        assert len(data) >= 16 and "ucb1" in ids and "random_forest_ts" in ids
+
+
+class TestCobaDiagnostics:
+    def test_returns_coba_state_for_simulation(self, client):
+        sid = client.post("/api/simulate", json={"arms": _arms_2(), "algorithm": "linucb"}).json()[
+            "id"
+        ]
+        client.post(f"/api/simulate/{sid}/run", json={"steps": 8})
+        r = client.get(f"/api/simulate/{sid}/coba-state")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["policy"] == "linucb"
+        assert "stats" in data and len(data["stats"]) == 2
+        assert "model_state" in data and "arms" in data["model_state"]
+        assert "scores" in data and set(data["scores"]) == {"A", "B"}
 
 
 class TestCors:

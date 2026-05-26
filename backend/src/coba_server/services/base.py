@@ -35,3 +35,6 @@ class CobaAdapter(ABC):
 
     @abstractmethod
     def get_supported_algorithms(self) -> list[dict]: ...
+
+    @abstractmethod
+    def get_coba_state(self, handle: int) -> dict: ...

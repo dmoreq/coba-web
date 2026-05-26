@@ -79,6 +79,17 @@ async def delete_simulation(
     service.delete(sim_id)
 
 
+@router.get("/{sim_id}/coba-state")
+async def get_coba_state(
+    sim_id: UUID,
+    service: SimulationService = Depends(get_simulation_service),
+) -> dict:
+    try:
+        return service.get_coba_state(sim_id)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+
 @router.get("/{sim_id}/results")
 async def get_results(
     sim_id: UUID,

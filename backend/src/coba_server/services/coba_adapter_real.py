@@ -300,6 +300,23 @@ class CobaLibraryAdapter(CobaAdapter):
         self._ts[handle] = t
         return record
 
+    def get_coba_state(self, handle: int) -> dict:
+        """Expose native coba diagnostics for dogfooding dashboards/tests."""
+        bandit = self._bandits[handle]
+        history = self._histories[handle]
+        context = (
+            np.array(history[-1].context, dtype=float)
+            if history and history[-1].context is not None
+            else np.zeros(2, dtype=float)
+        )
+        return {
+            "policy": bandit.policy.value,
+            "is_fitted": bandit.is_fitted,
+            "stats": [s.model_dump() for s in bandit.get_stats()],
+            "scores": {str(k): float(_cap_score(v)) for k, v in bandit.score_all(context).items()},
+            "model_state": bandit.get_model_state(context),
+        }
+
     def delete(self, handle: int) -> None:
         for d in (
             self._bandits,

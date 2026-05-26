@@ -77,6 +77,11 @@ class SimulationService:
         self._simulations.pop(sim_id, None)
         self._created_at.pop(sim_id, None)
 
+    def get_coba_state(self, sim_id: UUID) -> dict:
+        if sim_id not in self._simulations:
+            raise ValueError("Simulation not found")
+        return self._adapter.get_coba_state(self._handle_map[sim_id])
+
     def get_results(self, sim_id: UUID) -> ResultsResponse:
         sim = self._simulations.get(sim_id)
         if sim is None:
