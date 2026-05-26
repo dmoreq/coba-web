@@ -7,6 +7,7 @@ vi.mock("@/lib/api", () => ({
     createSimulation: vi.fn(),
     step: vi.fn(),
     getSimulation: vi.fn(),
+    deleteSimulation: vi.fn(),
   },
   ApiError: class ApiError extends Error {
     constructor(
@@ -103,6 +104,7 @@ beforeEach(() => {
     isLoading: false,
     error: null,
   });
+  (api.deleteSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
   vi.clearAllMocks();
 });
 

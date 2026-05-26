@@ -31,30 +31,44 @@ export default function ComparePage() {
   const [isRunning, setIsRunning] = useState(false);
   const [speed, setSpeed] = useState(2);
 
-  const initSims = useCallback(async (algoAval: AlgorithmId, algoBval: AlgorithmId) => {
-    setError(null);
-    try {
-      const [ra, rb] = await Promise.all([
-        api.createSimulation(
-          DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
-          algoAval,
-          { alpha: 2.0 },
-          99,
-        ),
-        api.createSimulation(
-          DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
-          algoBval,
-          { alpha: 2.0 },
-          99,
-        ),
-      ]);
-      setIds({ a: ra.id, b: rb.id });
-      setSimA(ra.state as SimStateResponse);
-      setSimB(rb.state as SimStateResponse);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to initialize");
-    }
-  }, []);
+  const initSims = useCallback(
+    async (algoAval: AlgorithmId, algoBval: AlgorithmId) => {
+      setError(null);
+      try {
+        // Clean up old simulations
+        if (ids) {
+          await Promise.all([
+            api.deleteSimulation(ids.a).catch(() => {
+              /* ignore */
+            }),
+            api.deleteSimulation(ids.b).catch(() => {
+              /* ignore */
+            }),
+          ]);
+        }
+        const [ra, rb] = await Promise.all([
+          api.createSimulation(
+            DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
+            algoAval,
+            { alpha: 2.0 },
+            99,
+          ),
+          api.createSimulation(
+            DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
+            algoBval,
+            { alpha: 2.0 },
+            99,
+          ),
+        ]);
+        setIds({ a: ra.id, b: rb.id });
+        setSimA(ra.state as SimStateResponse);
+        setSimB(rb.state as SimStateResponse);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to initialize");
+      }
+    },
+    [ids],
+  );
 
   useEffect(() => {
     initSims(algoA, algoB);

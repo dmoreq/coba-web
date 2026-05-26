@@ -54,8 +54,15 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   error: null,
 
   initialize: async (arms, algorithm, alpha, epsilon) => {
+    const { simId: oldSimId } = get();
     set({ isLoading: true, error: null });
     try {
+      // Clean up old simulation if it exists
+      if (oldSimId) {
+        await api.deleteSimulation(oldSimId).catch(() => {
+          /* ignore cleanup errors */
+        });
+      }
       const result = await api.createSimulation(
         toSnakeArms(arms),
         algorithm,
@@ -101,10 +108,16 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   pause: () => set({ isRunning: false }),
 
   reset: async (algo?: AlgorithmId) => {
-    const { simState, seed } = get();
+    const { simState, seed, simId: oldSimId } = get();
     if (!simState) return;
     set({ isRunning: false, isLoading: true, error: null });
     try {
+      // Clean up old simulation
+      if (oldSimId) {
+        await api.deleteSimulation(oldSimId).catch(() => {
+          /* ignore cleanup errors */
+        });
+      }
       const result = await api.createSimulation(
         toSnakeArms(simState.arms),
         algo ?? simState.algorithm,
@@ -125,8 +138,15 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setSeed: (seed) => set({ seed }),
 
   applySettings: async ({ arms, algorithm: algo, alpha, epsilon }) => {
+    const { simId: oldSimId } = get();
     set({ isLoading: true, error: null, isRunning: false });
     try {
+      // Clean up old simulation
+      if (oldSimId) {
+        await api.deleteSimulation(oldSimId).catch(() => {
+          /* ignore cleanup errors */
+        });
+      }
       const result = await api.createSimulation(
         toSnakeArms(arms),
         algo,

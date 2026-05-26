@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from uuid import UUID
 
 from coba_server.models.simulation import (
@@ -13,19 +14,36 @@ from coba_server.models.simulation import (
 )
 from coba_server.services.base import CobaAdapter
 
+# Simulations expire after 1 hour of inactivity
+SIMULATION_TTL_SECONDS = 3600
+
 
 class SimulationService:
     def __init__(self, adapter: CobaAdapter):
         self._adapter = adapter
         self._simulations: dict[UUID, Simulation] = {}
         self._handle_map: dict[UUID, int] = {}
+        self._created_at: dict[UUID, float] = {}
+
+    def _prune_expired(self) -> None:
+        """Remove simulations older than TTL_SECONDS."""
+        now = time.time()
+        expired = [
+            sim_id
+            for sim_id, created_at in self._created_at.items()
+            if now - created_at > SIMULATION_TTL_SECONDS
+        ]
+        for sim_id in expired:
+            self.delete(sim_id)
 
     def create(self, req: CreateSimRequest) -> Simulation:
+        self._prune_expired()
         handle = self._adapter.create(req.arms, req.algorithm, req.hyperparams, req.seed)
         state = self._adapter.get_state(handle)
         sim = Simulation(state=state, algorithm=req.algorithm, seed=req.seed)
         self._simulations[sim.id] = sim
         self._handle_map[sim.id] = handle
+        self._created_at[sim.id] = time.time()
         return sim
 
     def get(self, sim_id: UUID) -> Simulation | None:
@@ -57,6 +75,7 @@ class SimulationService:
         if handle is not None:
             self._adapter.delete(handle)
         self._simulations.pop(sim_id, None)
+        self._created_at.pop(sim_id, None)
 
     def get_results(self, sim_id: UUID) -> ResultsResponse:
         sim = self._simulations.get(sim_id)
