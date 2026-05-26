@@ -41,7 +41,7 @@ export default function PlaygroundPage() {
     if (initialized.current) return;
     initialized.current = true;
     if (!simState) {
-      initialize(DEFAULT_ARMS, "ucb1", DEFAULT_HYPERPARAMS.ucb1);
+      initialize(null, "ucb1", DEFAULT_HYPERPARAMS.ucb1, "notification_channels");
     }
   }, [initialize, simState]);
 

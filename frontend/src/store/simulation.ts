@@ -16,13 +16,15 @@ interface SimulationStore {
   isRunning: boolean;
   speed: number;
   seed: number;
+  scenarioId: string;
   isLoading: boolean;
   error: string | null;
 
   initialize: (
-    arms: Arm[],
+    arms: Arm[] | null,
     algorithm: AlgorithmId,
     hyperparams: Record<string, number>,
+    scenarioId?: string,
   ) => Promise<void>;
   step: () => Promise<void>;
   play: () => void;
@@ -30,11 +32,13 @@ interface SimulationStore {
   reset: (algo?: AlgorithmId) => Promise<void>;
   setSpeed: (v: number) => void;
   setSeed: (s: number) => void;
+  setScenario: (scenarioId: string) => void;
   applySettings: (payload: SettingsPayload) => Promise<void>;
   clearError: () => void;
 }
 
-function toSnakeArms(arms: Arm[]) {
+function toSnakeArms(arms: Arm[] | null) {
+  if (!arms) return null;
   return arms.map((a) => ({
     id: a.id,
     label: a.label,
@@ -50,10 +54,11 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   isRunning: false,
   speed: 0.5,
   seed: 42,
+  scenarioId: "notification_channels",
   isLoading: false,
   error: null,
 
-  initialize: async (arms, algorithm, hyperparams) => {
+  initialize: async (arms, algorithm, hyperparams, scenarioId = "notification_channels") => {
     const { simId: oldSimId } = get();
     set({ isLoading: true, error: null });
     try {
@@ -65,10 +70,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         algorithm,
         hyperparams,
         get().seed,
+        scenarioId,
       );
       set({
         simId: result.id,
         simState: { ...(result.state as SimState), hyperparams: { ...hyperparams }, algorithm },
+        scenarioId,
         isLoading: false,
       });
     } catch (e) {
@@ -109,7 +116,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   pause: () => set({ isRunning: false }),
 
   reset: async (algo?: AlgorithmId) => {
-    const { simState, seed, simId: oldSimId } = get();
+    const { simState, seed, simId: oldSimId, scenarioId } = get();
     if (!simState) return;
     set({ isRunning: false, isLoading: true, error: null });
     try {
@@ -126,6 +133,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         algorithm,
         hyperparams,
         seed,
+        scenarioId,
       );
       set({
         simId: result.id,
@@ -144,14 +152,22 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   setSeed: (seed) => set({ seed }),
 
+  setScenario: (scenarioId) => set({ scenarioId }),
+
   applySettings: async ({ arms, algorithm: algo, hyperparams }) => {
-    const { simId: oldSimId } = get();
+    const { simId: oldSimId, scenarioId } = get();
     set({ isLoading: true, error: null, isRunning: false });
     try {
       if (oldSimId) {
         await api.deleteSimulation(oldSimId).catch(() => {});
       }
-      const result = await api.createSimulation(toSnakeArms(arms), algo, hyperparams, get().seed);
+      const result = await api.createSimulation(
+        toSnakeArms(arms),
+        algo,
+        hyperparams,
+        get().seed,
+        scenarioId,
+      );
       set({
         simId: result.id,
         simState: {

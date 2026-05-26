@@ -53,6 +53,7 @@ export interface ApiSimulation {
   state: ApiSimState;
   algorithm: string;
   seed: number;
+  scenarioId: string | null;
 }
 
 /** The simulation state returned by the API (camelCased) */
@@ -64,6 +65,9 @@ export interface ApiSimState {
   algorithm: AlgorithmId;
   alpha: number;
   epsilon: number;
+  scenarioId: string | null;
+  featureNames: string[];
+  featureLabels: string[];
   history: Array<{
     t: number;
     chosenIdx: number;
@@ -77,9 +81,13 @@ export interface ApiSimState {
       sample?: number | null;
       formula: string;
     }>;
-    context: [number, number] | null;
+    context: number[] | null;
+    contextSegment: string | null;
     wasRandom: boolean;
     trueProb: number;
+    optimalIdx?: number | null;
+    optimalProb?: number | null;
+    allTrueProbs?: number[] | null;
   }>;
   regretHistory: number[];
 }
@@ -123,6 +131,16 @@ export interface ApiAlgoInfo {
   label: string;
   description: string;
   hyperparams: string[];
+}
+
+export interface ApiScenarioInfo {
+  id: string;
+  label: string;
+  description: string;
+  domain: string;
+  featureCount: number;
+  armCount: number;
+  hasDrift: boolean;
 }
 
 // ── Request helpers ──
@@ -182,6 +200,10 @@ export const api = {
     return request<ApiAlgoInfo[]>("GET", "/api/algorithms");
   },
 
+  async getScenarios(): Promise<ApiScenarioInfo[]> {
+    return request<ApiScenarioInfo[]>("GET", "/api/scenarios");
+  },
+
   async createSimulation(
     arms: Array<{
       id: string;
@@ -189,15 +211,16 @@ export const api = {
       true_prob: number;
       color?: string;
       light_color?: string;
-    }>,
+    }> | null,
     algorithm: string,
     hyperparams: Record<string, number>,
     seed: number,
+    scenarioId = "notification_channels",
   ): Promise<ApiSimulation> {
     return request<ApiSimulation>(
       "POST",
       "/api/simulate",
-      { arms, algorithm, hyperparams, seed },
+      { arms, algorithm, hyperparams, seed, scenario_id: scenarioId },
       { timeout: 15_000 },
     );
   },

@@ -39,9 +39,13 @@ export interface StepRecord {
   stepRegret: number;
   cumRegret: number;
   scores: Score[];
-  context: [number, number] | null;
+  context: number[] | null;
+  contextSegment: string | null;
   wasRandom: boolean;
   trueProb: number;
+  optimalIdx?: number | null;
+  optimalProb?: number | null;
+  allTrueProbs?: number[] | null;
 }
 
 /** Full simulation state — pure data, no methods */
@@ -53,6 +57,9 @@ export interface SimState {
   alpha: number;
   epsilon: number;
   hyperparams: Record<string, number>;
+  scenarioId: string | null;
+  featureNames: string[];
+  featureLabels: string[];
   t: number;
   history: StepRecord[];
   regretHistory: number[];
@@ -85,3 +92,13 @@ export interface AlgoMeta {
 }
 
 export type RngFn = () => number;
+
+export interface ScenarioInfo {
+  id: string;
+  label: string;
+  description: string;
+  domain: string;
+  featureCount: number;
+  armCount: number;
+  hasDrift: boolean;
+}
