@@ -57,7 +57,7 @@ wheels = [
 [[package]]
 name = "coba"
 version = "0.1.0"
-source = { git = "https://github.com/dmoreq/coba.git#dd67767ba17347c9827d2ff9ece882eb9ec1bd66" }
+source = { git = "https://github.com/dmoreq/coba.git#969bf1a96a85f87bd77959fcc0db7b27bf7df338" }
 dependencies = [
     { name = "joblib" },
     { name = "loguru" },

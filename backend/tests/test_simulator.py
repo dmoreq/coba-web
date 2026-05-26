@@ -3,13 +3,13 @@
 import pytest
 
 from coba_server.models.simulation import ArmConfig, CreateSimRequest
-from coba_server.services.coba_adapter import InMemoryCobaAdapter
+from coba_server.services.coba_adapter_real import CobaLibraryAdapter
 from coba_server.services.simulator import SimulationService
 
 
 @pytest.fixture
 def adapter():
-    return InMemoryCobaAdapter()
+    return CobaLibraryAdapter()
 
 
 @pytest.fixture

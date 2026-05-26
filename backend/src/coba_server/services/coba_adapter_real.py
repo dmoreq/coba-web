@@ -1,6 +1,6 @@
 """
 Adapter wrapping the real `coba` library's ClusterBandit.
-Swappable via di.py — toggle USE_COBA_LIBRARY.
+This is the only adapter — InMemoryCobaAdapter removed (always use real coba).
 """
 
 from __future__ import annotations
@@ -20,6 +20,8 @@ from coba_server.models.simulation import (
 )
 from coba_server.services.base import CobaAdapter
 
+# Hidden-layer weights used to generate context-dependent true probabilities for
+# LinUCB simulations (simulates an unknown non-linear reward surface).
 HIDDEN_WEIGHTS: list[dict] = [
     {"weights": [-0.4, -0.7], "bias": -0.3},
     {"weights": [0.8, 0.6], "bias": 0.4},
@@ -36,6 +38,11 @@ POLICY_MAP: dict[AlgorithmId, PolicyType] = {
 
 def _sig(x: float) -> float:
     return 1 / (1 + np.exp(-x))
+
+
+def _cap_score(raw: float) -> float:
+    """Replace +inf cold-start scores with a finite sentinel for JSON serialisation."""
+    return 99.0 if raw == float("inf") else float(raw)
 
 
 class CobaLibraryAdapter(CobaAdapter):
@@ -104,6 +111,53 @@ class CobaLibraryAdapter(CobaAdapter):
             regret_history=list(self._regret_histories[handle]),
         )
 
+    def _build_scores(
+        self,
+        dec: object,
+        arm_labels: list[str],
+        chosen_idx: int,
+    ) -> list[Score]:
+        """Build per-arm Score objects from a BanditDecision.
+
+        - The *chosen* arm gets decomposed mean/bonus from dec.mean_estimate /
+          dec.confidence_width (populated by coba since commit 1cb4eba).
+        - Every arm gets its raw UCB/score value from dec.all_scores.
+        - Cold-start decisions (all_scores empty or all zero before fitting)
+          are labelled clearly.
+        """
+        from coba.schemas import BanditDecision  # type: ignore[attr-defined]
+
+        d: BanditDecision = dec  # type: ignore[assignment]
+        scores: list[Score] = []
+
+        if d.all_scores:
+            for i, label in enumerate(arm_labels):
+                raw = d.all_scores.get(label, 0.0)
+                capped = _cap_score(raw)
+                is_chosen = i == chosen_idx
+                if is_chosen and d.mean_estimate is not None:
+                    mean = float(d.mean_estimate)
+                    bonus = float(d.confidence_width) if d.confidence_width is not None else 0.0
+                    formula = f"μ̂={mean:.3f} + bonus={bonus:.3f} → {capped:.3f}"
+                else:
+                    mean = 0.0
+                    bonus = 0.0
+                    label_tag = "cold-start" if raw == 0.0 else f"score={capped:.3f}"
+                    formula = f"coba {label_tag}"
+                scores.append(Score(mean=mean, bonus=bonus, score=capped, formula=formula))
+        else:
+            # Router not yet fitted — cold-start round-robin phase
+            for i in range(len(arm_labels)):
+                scores.append(
+                    Score(
+                        mean=0.0,
+                        bonus=99.0,
+                        score=99.0 if i == chosen_idx else 0.0,
+                        formula="cold-start",
+                    )
+                )
+        return scores
+
     def step(self, handle: int) -> StepRecord:
         bandit = self._bandits[handle]
         arm_labels = self._arm_labels[handle]
@@ -120,28 +174,7 @@ class CobaLibraryAdapter(CobaAdapter):
         chosen_label = dec.chosen_arm
         chosen_idx = arm_labels.index(chosen_label) if chosen_label else 0
 
-        scores: list[Score] = []
-        if dec.all_scores:
-            for i, label in enumerate(arm_labels):
-                raw = dec.all_scores.get(label, 0.0)
-                scores.append(
-                    Score(
-                        mean=dec.mean_estimate if dec.mean_estimate is not None else 0.0,
-                        bonus=dec.confidence_width if dec.confidence_width is not None else 0.0,
-                        score=99.0 if raw == float("inf") else float(raw),
-                        formula=f"coba: {raw:.3f}",
-                    )
-                )
-        else:
-            for i in range(len(arm_labels)):
-                scores.append(
-                    Score(
-                        mean=0.0,
-                        bonus=99.0,
-                        score=99.0 if i == chosen_idx else 0.0,
-                        formula="Cold start",
-                    )
-                )
+        scores = self._build_scores(dec, arm_labels, chosen_idx)
 
         if algorithm == "linucb":
             probs = [
@@ -159,6 +192,7 @@ class CobaLibraryAdapter(CobaAdapter):
         cum_regret = prev_cum + step_regret
         bandit.update(context, chosen_label, float(outcome))
 
+        # Update shadow arm_states (used for frontend display)
         s = arm_states[chosen_idx]
         arm_states[chosen_idx] = ArmState(
             n=s.n + 1,
@@ -166,6 +200,7 @@ class CobaLibraryAdapter(CobaAdapter):
             failures=s.failures + (1 - int(outcome)),
         )
 
+        # Update shadow lin_meta (for LinUCB visualisation in frontend)
         if algorithm == "linucb":
             x = context.tolist()
             m = lin_meta[chosen_idx]
@@ -185,13 +220,20 @@ class CobaLibraryAdapter(CobaAdapter):
             cum_regret=float(cum_regret),
             scores=scores,
             context=context.tolist() if algorithm == "linucb" else None,
-            was_random=False,
+            was_random=bool(dec.was_random),  # populated by coba since commit 1cb4eba
             true_prob=float(true_prob),
         )
         self._histories[handle].append(record)
         if len(self._histories[handle]) > MAX_HISTORY_LENGTH:
             self._histories[handle] = self._histories[handle][-MAX_HISTORY_LENGTH:]
+
+        # Cap regret_history at MAX_HISTORY_LENGTH to prevent unbounded memory growth.
+        # The last entry always holds the current cumulative regret, so truncation
+        # is safe — cum_regret is derived from the previous entry, not the list length.
         self._regret_histories[handle].append(float(cum_regret))
+        if len(self._regret_histories[handle]) > MAX_HISTORY_LENGTH:
+            self._regret_histories[handle] = self._regret_histories[handle][-MAX_HISTORY_LENGTH:]
+
         self._ts[handle] = t
         return record
 

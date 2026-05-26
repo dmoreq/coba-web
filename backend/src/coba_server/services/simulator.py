@@ -103,13 +103,21 @@ class SimulationService:
                     "pulls": st.n,
                 }
             )
+        # Convergence: use all-time pull counts from arm_states (not truncated history).
+        # The history window is at most MAX_HISTORY_LENGTH steps, but arm_states.n
+        # reflects the full run. We estimate the step at which the best arm first
+        # crossed 50% share by scanning the (possibly truncated) history backwards.
         convergence_step: int | None = None
-        cum_pulls = [0] * len(state.arms)
-        for step in state.history:
-            cum_pulls[step.chosen_idx] += 1
-            if cum_pulls[best_arm_idx] / step.t > 0.5:
-                convergence_step = step.t
-                break
+        best_arm_pulls = state.arm_states[best_arm_idx].n
+        if t > 0 and best_arm_pulls / t > 0.5:
+            # Scan history backwards to find the last step where the best arm
+            # was NOT dominant — convergence happened just after that point.
+            for step in reversed(state.history):
+                if step.chosen_idx != best_arm_idx:
+                    convergence_step = step.t + 1
+                    break
+            else:
+                convergence_step = state.history[0].t if state.history else 1
         narrative = (
             f"After {t} steps using {sim.algorithm}, cumulative regret"
             f" {cum_regret:.2f}. Best arm: {best_arm.label}."

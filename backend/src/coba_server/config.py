@@ -7,6 +7,5 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     cors_origins: list[str] = ["http://localhost:3000", "http://localhost:8000"]
-    use_coba_library: bool = False
 
     model_config = {"env_prefix": "COBA_"}
