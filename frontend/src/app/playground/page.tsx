@@ -31,6 +31,8 @@ export default function PlaygroundPage() {
   const storeReset = useSimulationStore((s) => s.reset);
   const initialize = useSimulationStore((s) => s.initialize);
   const clearError = useSimulationStore((s) => s.clearError);
+  const scenarioId = useSimulationStore((s) => s.scenarioId);
+  const setScenario = useSimulationStore((s) => s.setScenario);
 
   const [showGT, setShowGT] = useState(false);
   const display = simState ?? defaultDisplay();
@@ -70,6 +72,12 @@ export default function PlaygroundPage() {
         onStep={storeStep}
         onReset={(algo) => storeReset(algo as AlgorithmId)}
         onSpeedChange={storeSetSpeed}
+        scenarioId={scenarioId}
+        onScenarioChange={async (newScenarioId) => {
+          setScenario(newScenarioId);
+          await initialize(null, display.algorithm, display.hyperparams, newScenarioId);
+        }}
+        isLoading={isLoading}
       />
       <div className="flex-1 flex overflow-hidden">
         <StepFeed

@@ -1,5 +1,6 @@
 "use client";
 
+import { ScenarioPicker } from "@/components/playground/ScenarioPicker";
 import { AlgorithmSelector } from "@/components/shared/AlgorithmSelector";
 import { PlaybackControls } from "@/components/shared/PlaybackControls";
 import { SpeedSelector } from "@/components/shared/SpeedSelector";
@@ -14,6 +15,9 @@ interface ControlBarProps {
   onStep: () => void;
   onReset: (algo?: AlgorithmId) => void;
   onSpeedChange: (v: number) => void;
+  scenarioId?: string;
+  onScenarioChange?: (scenarioId: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
 export function ControlBar({
@@ -24,9 +28,19 @@ export function ControlBar({
   onStep,
   onReset,
   onSpeedChange,
+  scenarioId = "notification_channels",
+  onScenarioChange,
+  isLoading = false,
 }: ControlBarProps) {
   return (
     <div className="flex items-center gap-[10px] p-[9px_16px] bg-white border-b border-gray-3 flex-shrink-0 flex-wrap font-sans">
+      {onScenarioChange && (
+        <ScenarioPicker
+          selectedScenarioId={scenarioId}
+          onScenarioChange={onScenarioChange}
+          isLoading={isLoading}
+        />
+      )}
       <AlgorithmSelector selected={simState.algorithm} onChange={(a) => onReset(a)} />
       <div className="flex-1 min-w-[8px]" />
       <PlaybackControls isRunning={isRunning} onStep={onStep} onPlayPause={onPlayPause} />
