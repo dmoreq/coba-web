@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useMemo } from "react";
 import type { Arm, StepRecord } from "@/lib/types";
 import { StepFeedEntry } from "./StepFeedEntry";
 
@@ -9,8 +10,8 @@ interface StepFeedProps {
   t: number;
 }
 
-export function StepFeed({ history, arms, t }: StepFeedProps) {
-  const recentSteps = [...history].reverse().slice(0, 14);
+function StepFeedComponent({ history, arms, t }: StepFeedProps) {
+  const recentSteps = useMemo(() => [...history].reverse().slice(0, 14), [history]);
 
   return (
     <div
@@ -31,3 +32,5 @@ export function StepFeed({ history, arms, t }: StepFeedProps) {
     </div>
   );
 }
+
+export const StepFeed = memo(StepFeedComponent);

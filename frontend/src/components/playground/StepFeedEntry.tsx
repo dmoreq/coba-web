@@ -1,4 +1,4 @@
-import { ALGO_META } from "@/lib/constants";
+import { memo } from "react";
 import type { Arm, StepRecord } from "@/lib/types";
 
 interface StepFeedEntryProps {

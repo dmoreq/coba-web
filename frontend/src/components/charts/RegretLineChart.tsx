@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import { CHART_THEME } from "@/lib/chart-theme";
 import { MAX_HISTORY_LENGTH } from "@/lib/constants";
@@ -21,7 +22,7 @@ interface RegretLineChartProps {
   color?: string;
 }
 
-export function RegretLineChart({
+function RegretLineChartComponent({
   regretHistory,
   width = 280,
   height = 110,
@@ -86,3 +87,5 @@ export function RegretLineChart({
     </ResponsiveContainer>
   );
 }
+
+export const RegretLineChart = memo(RegretLineChartComponent);

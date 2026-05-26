@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { EmptyChart } from "@/components/shared/EmptyChart";
 import { CHART_THEME } from "@/lib/chart-theme";
 import {
@@ -24,7 +25,7 @@ interface DualRegretChartProps {
   height?: number;
 }
 
-export function DualRegretChart({
+function DualRegretChartComponent({
   histA,
   histB,
   colorA,
@@ -86,3 +87,5 @@ export function DualRegretChart({
     </ResponsiveContainer>
   );
 }
+
+export const DualRegretChart = memo(DualRegretChartComponent);

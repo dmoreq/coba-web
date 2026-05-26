@@ -1,8 +1,8 @@
 "use client";
 
+import { memo, useState } from "react";
 import { ALGO_META } from "@/lib/constants";
 import type { AlgorithmId, SimState } from "@/lib/types";
-import { useState } from "react";
 import { ArmRow } from "./ArmRow";
 import { FormulaPanel } from "./FormulaPanel";
 
@@ -11,7 +11,7 @@ interface UCBDisplayProps {
   showGroundTruth: boolean;
 }
 
-export function UCBDisplay({ simState, showGroundTruth }: UCBDisplayProps) {
+function UCBDisplayComponent({ simState, showGroundTruth }: UCBDisplayProps) {
   const [showMath, setShowMath] = useState(false);
   const { arms, armStates, history, algorithm, alpha, t } = simState;
   const lastStep = history[history.length - 1];
@@ -83,3 +83,5 @@ export function UCBDisplay({ simState, showGroundTruth }: UCBDisplayProps) {
     </div>
   );
 }
+
+export const UCBDisplay = memo(UCBDisplayComponent);

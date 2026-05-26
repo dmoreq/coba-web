@@ -1,6 +1,7 @@
 "use client";
 
 import { TruthToggle } from "@/components/shared/TruthToggle";
+import { memo } from "react";
 import type { SimState } from "@/lib/types";
 
 interface EnvPanelProps {
@@ -9,7 +10,7 @@ interface EnvPanelProps {
   onToggle: () => void;
 }
 
-export function EnvPanel({ simState, showGroundTruth, onToggle }: EnvPanelProps) {
+function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProps) {
   const { arms, armStates, algorithm, history, t } = simState;
   const lastStep = history[history.length - 1];
 
@@ -86,3 +87,5 @@ export function EnvPanel({ simState, showGroundTruth, onToggle }: EnvPanelProps)
     </div>
   );
 }
+
+export const EnvPanel = memo(EnvPanelComponent);
