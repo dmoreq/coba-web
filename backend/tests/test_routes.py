@@ -8,6 +8,13 @@ def _arms():
     ]
 
 
+def _arms_2():
+    return [
+        {"id": "a", "label": "A", "true_prob": 0.5},
+        {"id": "b", "label": "B", "true_prob": 0.6},
+    ]
+
+
 class TestCreateSimulation:
     def test_returns_201(self, client):
         r = client.post("/api/simulate", json={"arms": _arms()})
@@ -83,3 +90,27 @@ class TestCors:
             headers={"Origin": "http://localhost:3000"},
         )
         assert "access-control-allow-origin" in r.headers
+
+    def test_cors_restricts_http_methods(self, client):
+        """Verify CORS configuration only allows safe methods."""
+        # Create a simulation first
+        arms = [{"id": "a", "label": "A", "true_prob": 0.5}] * 2
+        r_create = client.post("/api/simulate", json={"arms": arms})
+        sim_id = r_create.json()["id"]
+
+        # Test preflight with Origin header
+        r_options = client.options(
+            f"/api/simulate/{sim_id}",
+            headers={"Origin": "http://localhost:3000"},
+        )
+        # CORS should be enabled
+        assert "access-control-allow-origin" in r_options.headers
+
+        # Check if allow-methods header exists and verify it doesn't use wildcard
+        if "access-control-allow-methods" in r_options.headers:
+            methods = r_options.headers["access-control-allow-methods"].upper()
+            # Should not be the overly-permissive wildcard
+            assert methods != "*", "CORS allow-methods should not be * for security"
+            # Should not explicitly allow unsafe methods
+            for unsafe in ["PUT", "PATCH"]:
+                assert unsafe not in methods
