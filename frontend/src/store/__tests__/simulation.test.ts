@@ -129,11 +129,13 @@ describe("simulation store", () => {
     await useSimulationStore.getState().initialize(mockArms, "ucb1", 2.0, 0.1);
 
     (api.step as ReturnType<typeof vi.fn>).mockResolvedValue(mockStepResponse);
-    (api.getSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(2));
 
     await useSimulationStore.getState().step();
     expect(api.step).toHaveBeenCalledWith("sim-123");
-    expect(api.getSimulation).toHaveBeenCalledWith("sim-123");
+    // verify state is updated from step response (no getSimulation call needed)
+    const state = useSimulationStore.getState();
+    expect(state.simState?.t).toBe(2);
+    expect(state.simState?.history.length).toBe(1);
   });
 
   it("play/pause toggle isRunning", () => {

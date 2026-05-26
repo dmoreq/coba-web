@@ -72,13 +72,21 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   },
 
   step: async () => {
-    const { simId } = get();
-    if (!simId) return;
+    const { simId, simState } = get();
+    if (!simId || !simState) return;
     set({ isLoading: true, error: null });
     try {
-      await api.step(simId);
-      const sim = await api.getSimulation(simId);
-      set({ simState: sim.state as SimState, isLoading: false });
+      const stepResponse = await api.step(simId);
+      // Reconstruct SimState from StepResponse without fetching full sim
+      const newHistory = [...simState.history, stepResponse.step];
+      const updatedSimState: SimState = {
+        ...simState,
+        t: stepResponse.t,
+        armStates: stepResponse.armStates,
+        regretHistory: stepResponse.regretHistory,
+        history: newHistory,
+      };
+      set({ simState: updatedSimState, isLoading: false });
     } catch (e) {
       set({
         isLoading: false,

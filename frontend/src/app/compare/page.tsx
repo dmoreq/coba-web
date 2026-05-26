@@ -60,18 +60,30 @@ export default function ComparePage() {
   }, [initSims, algoA, algoB]);
 
   const handleStep = useCallback(async () => {
-    if (!ids) return;
+    if (!ids || !simA || !simB) return;
     try {
-      const [ra, rb] = await Promise.all([
-        api.step(ids.a).then(() => api.getSimulation(ids.a)),
-        api.step(ids.b).then(() => api.getSimulation(ids.b)),
-      ]);
-      setSimA(ra.state as SimStateResponse);
-      setSimB(rb.state as SimStateResponse);
+      const [stepA, stepB] = await Promise.all([api.step(ids.a), api.step(ids.b)]);
+      // Reconstruct sim states from step responses without additional fetches
+      const updatedSimA = {
+        ...simA,
+        t: stepA.t,
+        armStates: stepA.armStates,
+        regretHistory: stepA.regretHistory,
+        history: [...simA.history, stepA.step],
+      };
+      const updatedSimB = {
+        ...simB,
+        t: stepB.t,
+        armStates: stepB.armStates,
+        regretHistory: stepB.regretHistory,
+        history: [...simB.history, stepB.step],
+      };
+      setSimA(updatedSimA);
+      setSimB(updatedSimB);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Step failed");
     }
-  }, [ids]);
+  }, [ids, simA, simB]);
 
   const handleReset = useCallback(() => {
     setIsRunning(false);
