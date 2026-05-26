@@ -4,63 +4,20 @@ import { RegretLineChart } from "@/components/charts";
 import { PageShell } from "@/components/layout/PageShell";
 import { StatCard } from "@/components/ui";
 import { ALGO_META } from "@/lib/constants";
-import type { Arm, ArmState } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
 import { useRouter } from "next/navigation";
-
-interface BestArmRowProps {
-  arm: Arm;
-  armState: ArmState;
-  isBest: boolean;
-  trueProb: number;
-}
-
-function BestArmRow({ arm, armState, isBest, trueProb }: BestArmRowProps) {
-  const mean = armState.n === 0 ? 0 : armState.successes / armState.n;
-  const err = Math.abs(mean - trueProb);
-
-  return (
-    <div className="flex items-center gap-[10px] py-[7px] border-b border-gray-0 text-[13px]">
-      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: arm.color }} />
-      <span className="w-[52px] font-semibold text-gray-8 flex-shrink-0">{arm.label}</span>
-      <div className="flex-1 h-[8px] bg-gray-1 rounded-full">
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${mean * 100}%`, background: arm.color, opacity: 0.8 }}
-        />
-      </div>
-      <div className="w-[55px] text-right font-mono text-[12px] text-gray-7 tabular-nums">
-        {armState.n > 0 ? `${(mean * 100).toFixed(1)}%` : "—"}
-      </div>
-      <div
-        className="w-[38px] text-right font-mono text-[11px] font-semibold"
-        style={{ color: arm.color }}
-      >
-        {(trueProb * 100).toFixed(0)}%
-      </div>
-      <div
-        className="w-[60px] text-right text-[11px] font-mono tabular-nums"
-        style={{ color: err < 0.05 ? "#2f9e44" : err < 0.15 ? "#f08c00" : "#c92a2a" }}
-      >
-        ±{(err * 100).toFixed(1)}%
-      </div>
-      <div className="w-[42px] text-right font-mono text-[11px] text-gray-6">n={armState.n}</div>
-      {isBest && (
-        <span
-          className="text-[9px] px-[6px] py-[2px] rounded-full font-bold"
-          style={{ background: arm.lightColor, color: arm.color }}
-        >
-          BEST
-        </span>
-      )}
-    </div>
-  );
-}
 
 export default function ResultsPage() {
   const router = useRouter();
   const simState = useSimulationStore((s) => s.simState);
-  const { arms, armStates, t, regretHistory, history, algorithm } = simState;
+  const { arms, armStates, t, regretHistory, history, algorithm } = simState ?? {
+    arms: [],
+    armStates: [],
+    t: 0,
+    regretHistory: [],
+    history: [],
+    algorithm: "ucb1" as const,
+  };
 
   if (t === 0) {
     return (
@@ -71,6 +28,7 @@ export default function ResultsPage() {
             Run the Playground first, then come back here to review results.
           </div>
           <button
+            type="button"
             onClick={() => router.push("/playground")}
             className="mt-sm text-md font-semibold px-xl py-[10px] rounded-sm border-none bg-blue-6 text-white cursor-pointer font-sans"
           >
@@ -151,15 +109,57 @@ export default function ResultsPage() {
             <span className="w-[42px] text-right">Pulls</span>
             <span className="w-[42px]" />
           </div>
-          {arms.map((arm, i) => (
-            <BestArmRow
-              key={arm.id}
-              arm={arm}
-              armState={armStates[i]}
-              isBest={i === bestArmIdx}
-              trueProb={arm.trueProb}
-            />
-          ))}
+          {arms.map((arm, i) => {
+            const st = armStates[i];
+            const mean = st.n === 0 ? 0 : st.successes / st.n;
+            const err = Math.abs(mean - arm.trueProb);
+            return (
+              <div
+                key={arm.id}
+                className="flex items-center gap-[10px] py-[7px] border-b border-gray-0 text-[13px]"
+              >
+                <div
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: arm.color }}
+                />
+                <span className="w-[52px] font-semibold text-gray-8 flex-shrink-0">
+                  {arm.label}
+                </span>
+                <div className="flex-1 h-[8px] bg-gray-1 rounded-full">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${mean * 100}%`, background: arm.color, opacity: 0.8 }}
+                  />
+                </div>
+                <div className="w-[55px] text-right font-mono text-[12px] text-gray-7 tabular-nums">
+                  {st.n > 0 ? `${(mean * 100).toFixed(1)}%` : "—"}
+                </div>
+                <div
+                  className="w-[38px] text-right font-mono text-[11px] font-semibold"
+                  style={{ color: arm.color }}
+                >
+                  {(arm.trueProb * 100).toFixed(0)}%
+                </div>
+                <div
+                  className="w-[60px] text-right text-[11px] font-mono tabular-nums"
+                  style={{ color: err < 0.05 ? "#2f9e44" : err < 0.15 ? "#f08c00" : "#c92a2a" }}
+                >
+                  ±{(err * 100).toFixed(1)}%
+                </div>
+                <div className="w-[42px] text-right font-mono text-[11px] text-gray-6">
+                  n={st.n}
+                </div>
+                {i === bestArmIdx && (
+                  <span
+                    className="text-[9px] px-[6px] py-[2px] rounded-full font-bold"
+                    style={{ background: arm.lightColor, color: arm.color }}
+                  >
+                    BEST
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <div className="bg-white border border-gray-3 rounded-md p-lg mb-3">

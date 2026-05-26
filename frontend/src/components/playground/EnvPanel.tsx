@@ -22,7 +22,7 @@ export function EnvPanel({ simState, showGroundTruth, onToggle }: EnvPanelProps)
         <TruthToggle revealed={showGroundTruth} onToggle={onToggle} />
       </div>
 
-      {algorithm === "linucb" && lastStep && (
+      {algorithm === "linucb" && lastStep?.context && (
         <div className="mb-sm px-[10px] py-[6px] rounded-sm bg-violet-0 text-[11px] text-violet-6 font-mono">
           Context: age={lastStep.context[0].toFixed(3)}, mobile={lastStep.context[1].toFixed(3)}
         </div>

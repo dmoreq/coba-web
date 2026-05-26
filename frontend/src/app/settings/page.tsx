@@ -2,7 +2,7 @@
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Slider } from "@/components/ui/Slider";
-import { ALGO_META } from "@/lib/constants";
+import { ALGO_META, DEFAULT_ARMS } from "@/lib/constants";
 import type { AlgorithmId, Arm } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
 import { useState } from "react";
@@ -16,10 +16,10 @@ export default function SettingsPage() {
   const storeSeed = useSimulationStore((s) => s.seed);
   const setSeed = useSimulationStore((s) => s.setSeed);
 
-  const [arms, setArms] = useState<Arm[]>(storeSimState.arms);
-  const [algorithm, setAlgo] = useState<AlgorithmId>(storeSimState.algorithm);
-  const [alpha, setAlpha] = useState(storeSimState.alpha);
-  const [epsilon, setEps] = useState(storeSimState.epsilon);
+  const [arms, setArms] = useState<Arm[]>(storeSimState?.arms ?? DEFAULT_ARMS);
+  const [algorithm, setAlgo] = useState<AlgorithmId>(storeSimState?.algorithm ?? "ucb1");
+  const [alpha, setAlpha] = useState(storeSimState?.alpha ?? 2.0);
+  const [epsilon, setEps] = useState(storeSimState?.epsilon ?? 0.1);
   const [localSeed, setLocalSeed] = useState(storeSeed || 42);
   const [saved, setSaved] = useState(false);
 

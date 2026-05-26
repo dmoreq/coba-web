@@ -18,3 +18,11 @@ export type {
   RngFn,
 } from "./types";
 export { CHART_THEME } from "./chart-theme";
+export { api, ApiError } from "./api";
+export type {
+  ApiSimulation,
+  ApiSimState,
+  SimStateResponse,
+  ApiResultsResponse,
+  ApiAlgoInfo,
+} from "./api";

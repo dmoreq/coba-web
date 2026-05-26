@@ -27,11 +27,11 @@ export interface Score {
   mean: number;
   bonus: number;
   score: number;
-  sample?: number; // Thompson only
+  sample?: number | null; // Thompson only — null from JSON
   formula: string;
 }
 
-/** A single simulation step record */
+/** A single step record — matches backend JSON after camelCase conversion */
 export interface StepRecord {
   t: number;
   chosenIdx: number;
@@ -39,7 +39,7 @@ export interface StepRecord {
   stepRegret: number;
   cumRegret: number;
   scores: Score[];
-  context: [number, number];
+  context: [number, number] | null;
   wasRandom: boolean;
   trueProb: number;
 }

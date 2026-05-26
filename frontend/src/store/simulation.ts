@@ -1,8 +1,5 @@
-import { createInitialSimState } from "@/engine/init";
-import { makeRng } from "@/engine/rng";
-import { runStep } from "@/engine/step";
-import { DEFAULT_ARMS } from "@/lib/constants";
-import type { AlgorithmId, Arm, RngFn, SimState } from "@/lib/types";
+import { api } from "@/lib/api";
+import type { AlgorithmId, Arm, SimState } from "@/lib/types";
 import { create } from "zustand";
 
 interface SettingsPayload {
@@ -13,60 +10,129 @@ interface SettingsPayload {
 }
 
 interface SimulationStore {
-  simState: SimState;
+  simId: string | null;
+  simState: SimState | null;
   isRunning: boolean;
   speed: number;
   seed: number;
-  rngRef: { current: RngFn };
+  isLoading: boolean;
+  error: string | null;
 
-  step: () => void;
+  initialize: (
+    arms: Arm[],
+    algorithm: AlgorithmId,
+    alpha: number,
+    epsilon: number,
+  ) => Promise<void>;
+  step: () => Promise<void>;
   play: () => void;
   pause: () => void;
+  reset: (algo?: AlgorithmId) => Promise<void>;
   setSpeed: (v: number) => void;
   setSeed: (s: number) => void;
-  reset: (algo?: AlgorithmId) => void;
-  applySettings: (payload: SettingsPayload) => void;
+  applySettings: (payload: SettingsPayload) => Promise<void>;
+  clearError: () => void;
+}
+
+function toSnakeArms(arms: Arm[]) {
+  return arms.map((a) => ({
+    id: a.id,
+    label: a.label,
+    true_prob: a.trueProb,
+    color: a.color,
+    light_color: a.lightColor,
+  }));
 }
 
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
-  simState: createInitialSimState(DEFAULT_ARMS, "ucb1", 2.0, 0.1),
+  simId: null,
+  simState: null,
   isRunning: false,
   speed: 2,
   seed: 42,
-  rngRef: { current: makeRng(42) },
+  isLoading: false,
+  error: null,
 
-  step: () => {
-    const { simState, rngRef } = get();
-    const next = runStep(simState, rngRef.current);
-    set({ simState: next });
+  initialize: async (arms, algorithm, alpha, epsilon) => {
+    set({ isLoading: true, error: null });
+    try {
+      const result = await api.createSimulation(
+        toSnakeArms(arms),
+        algorithm,
+        { alpha, epsilon },
+        get().seed,
+      );
+      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+    } catch (e) {
+      set({
+        isLoading: false,
+        error: e instanceof Error ? e.message : "Failed to create simulation",
+      });
+    }
+  },
+
+  step: async () => {
+    const { simId } = get();
+    if (!simId) return;
+    set({ isLoading: true, error: null });
+    try {
+      await api.step(simId);
+      const sim = await api.getSimulation(simId);
+      set({ simState: sim.state as SimState, isLoading: false });
+    } catch (e) {
+      set({
+        isLoading: false,
+        error: e instanceof Error ? e.message : "Step failed",
+        isRunning: false,
+      });
+    }
   },
 
   play: () => set({ isRunning: true }),
 
   pause: () => set({ isRunning: false }),
 
+  reset: async (algo?: AlgorithmId) => {
+    const { simState, seed } = get();
+    if (!simState) return;
+    set({ isRunning: false, isLoading: true, error: null });
+    try {
+      const result = await api.createSimulation(
+        toSnakeArms(simState.arms),
+        algo ?? simState.algorithm,
+        { alpha: simState.alpha, epsilon: simState.epsilon },
+        seed,
+      );
+      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+    } catch (e) {
+      set({
+        isLoading: false,
+        error: e instanceof Error ? e.message : "Reset failed",
+      });
+    }
+  },
+
   setSpeed: (speed) => set({ speed }),
 
-  setSeed: (seed) => {
-    set({ seed, rngRef: { current: makeRng(seed) } });
+  setSeed: (seed) => set({ seed }),
+
+  applySettings: async ({ arms, algorithm: algo, alpha, epsilon }) => {
+    set({ isLoading: true, error: null, isRunning: false });
+    try {
+      const result = await api.createSimulation(
+        toSnakeArms(arms),
+        algo,
+        { alpha, epsilon },
+        get().seed,
+      );
+      set({ simId: result.id, simState: result.state as SimState, isLoading: false });
+    } catch (e) {
+      set({
+        isLoading: false,
+        error: e instanceof Error ? e.message : "Apply settings failed",
+      });
+    }
   },
 
-  reset: (algo?: AlgorithmId) => {
-    const { simState, seed, rngRef } = get();
-    const newAlgo = algo || simState.algorithm;
-    rngRef.current = makeRng(seed);
-    set({
-      simState: createInitialSimState(simState.arms, newAlgo, simState.alpha, simState.epsilon),
-      isRunning: false,
-    });
-  },
-
-  applySettings: ({ arms, algorithm: algo, alpha, epsilon }) => {
-    const { seed, rngRef } = get();
-    rngRef.current = makeRng(seed);
-    set({
-      simState: createInitialSimState(arms, algo, alpha, epsilon),
-      isRunning: false,
-    });
-  },
+  clearError: () => set({ error: null }),
 }));
