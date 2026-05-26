@@ -13,7 +13,12 @@ interface PullDistChartProps {
   height?: number;
 }
 
-function PullDistChartComponent({ arms, armStates, width = 200, height = 110 }: PullDistChartProps) {
+function PullDistChartComponent({
+  arms,
+  armStates,
+  width = 200,
+  height = 110,
+}: PullDistChartProps) {
   const totalN = armStates.reduce((s, a) => s + a.n, 0);
   const data = arms.map((arm, i) => ({
     label: arm.label,

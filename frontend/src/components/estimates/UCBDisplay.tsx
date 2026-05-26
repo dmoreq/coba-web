@@ -22,11 +22,23 @@ function UCBDisplayComponent({ simState, showGroundTruth }: UCBDisplayProps) {
 
   const meta = ALGO_META[algorithm as AlgorithmId] ?? ALGO_META.ucb1;
 
-  const algoLabel: Record<AlgorithmId, string> = {
+  const algoLabel: Record<string, string> = {
     ucb1: `UCB1 (\u03B1=${alpha.toFixed(1)})`,
     epsilon_greedy: `\u03B5-Greedy (\u03B5=${simState.epsilon.toFixed(2)})`,
     thompson: "Thompson Sampling",
     linucb: `LinUCB (\u03B1=${alpha.toFixed(1)})`,
+    lints: `LinTS (v\u00B2=${simState.hyperparams.v_sq?.toFixed(1) ?? "1.0"})`,
+    linucb_hybrid: `Hybrid LinUCB (\u03B1=${alpha.toFixed(1)})`,
+    linucb_sw: `SW-LinUCB (\u03B1=${alpha.toFixed(1)})`,
+    softmax: `Softmax (\u03C4=${simState.hyperparams.softmax_tau?.toFixed(1) ?? "1.0"})`,
+    neural_linear: "Neural Linear",
+    bootstrapped_ts: `Bootstrapped TS (n=${simState.hyperparams.n_bootstraps ?? 10})`,
+    bootstrapped_ucb: `Bootstrapped UCB (n=${simState.hyperparams.n_bootstraps ?? 10})`,
+    logistic_ucb: "Logistic UCB",
+    logistic_ts: "Logistic TS",
+    gp_ucb: `GP-UCB (\u03B2=${simState.hyperparams.gp_beta?.toFixed(1) ?? "2.0"})`,
+    random_forest_ucb: `RF UCB (trees=${simState.hyperparams.rf_n_estimators ?? 50})`,
+    random_forest_ts: `RF TS (trees=${simState.hyperparams.rf_n_estimators ?? 50})`,
   };
 
   return (

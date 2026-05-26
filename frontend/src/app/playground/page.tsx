@@ -9,7 +9,7 @@ import { StepFeed } from "@/components/playground/StepFeed";
 import { WhyPanel } from "@/components/playground/WhyPanel";
 import { Panel } from "@/components/ui/Panel";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
-import { DEFAULT_ARMS, createDefaultSimState } from "@/lib/constants";
+import { DEFAULT_ARMS, DEFAULT_HYPERPARAMS, createDefaultSimState } from "@/lib/constants";
 import type { AlgorithmId, SimState } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
 import { useEffect, useRef, useState } from "react";
@@ -41,7 +41,7 @@ export default function PlaygroundPage() {
     if (initialized.current) return;
     initialized.current = true;
     if (!simState) {
-      initialize(DEFAULT_ARMS, "ucb1", 2.0, 0.1);
+      initialize(DEFAULT_ARMS, "ucb1", DEFAULT_HYPERPARAMS.ucb1);
     }
   }, [initialize, simState]);
 

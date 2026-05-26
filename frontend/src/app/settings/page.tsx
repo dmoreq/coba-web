@@ -2,10 +2,16 @@
 
 import { PageShell } from "@/components/layout/PageShell";
 import { Slider } from "@/components/ui/Slider";
-import { ALGO_META, DEFAULT_ARMS } from "@/lib/constants";
+import {
+  ALGO_META,
+  ALGORITHM_ORDER,
+  DEFAULT_ARMS,
+  DEFAULT_HYPERPARAMS,
+  HYPERPARAM_META,
+} from "@/lib/constants";
 import type { AlgorithmId, Arm } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const AVAILABLE_COLORS = ["#ae3ec9", "#e64980", "#f76707", "#2f9e44"];
 const AVAILABLE_LIGHT = ["#f3d9fa", "#ffdeeb", "#fff4e6", "#ebfbee"];
@@ -18,19 +24,34 @@ export default function SettingsPage() {
 
   const [arms, setArms] = useState<Arm[]>(storeSimState?.arms ?? DEFAULT_ARMS);
   const [algorithm, setAlgo] = useState<AlgorithmId>(storeSimState?.algorithm ?? "ucb1");
-  const [alpha, setAlpha] = useState(storeSimState?.alpha ?? 2.0);
-  const [epsilon, setEps] = useState(storeSimState?.epsilon ?? 0.1);
+  const [hyperparams, setHyperparams] = useState<Record<string, number>>(
+    storeSimState?.hyperparams ?? { ...DEFAULT_HYPERPARAMS.ucb1 },
+  );
   const [localSeed, setLocalSeed] = useState(storeSeed || 42);
   const [saved, setSaved] = useState(false);
+
+  const meta = ALGO_META[algorithm];
+  const algoHyperparams = meta.hyperparams;
+
+  const handleAlgoChange = (algo: AlgorithmId) => {
+    setAlgo(algo);
+    setHyperparams((prev) => ({
+      ...DEFAULT_HYPERPARAMS[algo],
+      // Preserve n_clusters across algorithm switches when applicable
+      n_clusters: prev.n_clusters ?? DEFAULT_HYPERPARAMS[algo].n_clusters,
+    }));
+  };
+
+  const handleHyperparamChange = (key: string, value: number) => {
+    setHyperparams((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleArmProbChange = (idx: number, val: number) => {
     setArms((prev) => prev.map((a, i) => (i === idx ? { ...a, trueProb: val } : a)));
   };
 
   const handleArmLabelChange = (idx: number, label: string) => {
-    setArms((prev) =>
-      prev.map((a, i) => (i === idx ? { ...a, label: label || a.id } : a)),
-    );
+    setArms((prev) => prev.map((a, i) => (i === idx ? { ...a, label: label || a.id } : a)));
   };
 
   const handleAddArm = () => {
@@ -55,10 +76,14 @@ export default function SettingsPage() {
 
   const handleApply = () => {
     setSeed(localSeed);
-    setSimState({ arms, algorithm, alpha, epsilon });
+    setSimState({ arms, algorithm, hyperparams });
     setSaved(true);
     setTimeout(() => setSaved(false), 1800);
   };
+
+  // Group A (context-free) and B/C (contextual) for visual sections
+  const trackA = ALGORITHM_ORDER.slice(0, 3);
+  const trackBC = ALGORITHM_ORDER.slice(3);
 
   return (
     <PageShell>
@@ -132,50 +157,81 @@ export default function SettingsPage() {
             <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-6 mb-[14px] pb-sm border-b border-gray-1">
               Algorithm
             </div>
-            <div className="flex gap-[6px] flex-wrap mb-xl">
-              {(Object.entries(ALGO_META) as [AlgorithmId, (typeof ALGO_META)[AlgorithmId]][]).map(
-                ([key, meta]) => (
+
+            {/* Track A: Context-free */}
+            <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-5 mb-[6px]">
+              Context-free
+            </div>
+            <div className="flex gap-[6px] flex-wrap mb-sm">
+              {trackA.map((key) => {
+                const m = ALGO_META[key];
+                const isActive = key === algorithm;
+                return (
                   <button
                     key={key}
-                    onClick={() => setAlgo(key)}
+                    onClick={() => handleAlgoChange(key)}
                     className="px-[14px] py-[7px] rounded-xs border-none cursor-pointer text-[13px] font-sans transition-all duration-fast"
                     style={{
-                      fontWeight: algorithm === key ? 600 : 400,
-                      background: algorithm === key ? meta.color : "#f1f3f5",
-                      color: algorithm === key ? "white" : "#495057",
+                      fontWeight: isActive ? 600 : 400,
+                      background: isActive ? m.color : "#f1f3f5",
+                      color: isActive ? "white" : "#495057",
                     }}
                   >
-                    {meta.label}
+                    {m.label}
                   </button>
-                ),
-              )}
-            </div>
-            <div className="px-3 py-[10px] bg-gray-0 rounded-sm text-[12px] text-gray-7 mb-lg leading-relaxed">
-              {ALGO_META[algorithm]?.desc}
+                );
+              })}
             </div>
 
-            {(algorithm === "ucb1" || algorithm === "linucb") && (
-              <Slider
-                label="α — Exploration width"
-                value={alpha}
-                min={0.1}
-                max={5}
-                step={0.1}
-                onChange={setAlpha}
-                format={(v) => v.toFixed(1)}
-              />
+            {/* Track B+C: Contextual */}
+            <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-5 mb-[6px]">
+              Contextual
+            </div>
+            <div className="flex gap-[6px] flex-wrap mb-xl">
+              {trackBC.map((key) => {
+                const m = ALGO_META[key];
+                const isActive = key === algorithm;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => handleAlgoChange(key)}
+                    className="px-[14px] py-[7px] rounded-xs border-none cursor-pointer text-[13px] font-sans transition-all duration-fast"
+                    style={{
+                      fontWeight: isActive ? 600 : 400,
+                      background: isActive ? m.color : "#f1f3f5",
+                      color: isActive ? "white" : "#495057",
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Description */}
+            {meta?.desc && (
+              <div className="px-3 py-[10px] bg-gray-0 rounded-sm text-[12px] text-gray-7 mb-lg leading-relaxed">
+                {meta.desc}
+              </div>
             )}
-            {algorithm === "epsilon_greedy" && (
-              <Slider
-                label="ε — Exploration probability"
-                value={epsilon}
-                min={0.01}
-                max={0.5}
-                step={0.01}
-                onChange={setEps}
-                format={(v) => `${(v * 100).toFixed(0)}%`}
-              />
-            )}
+
+            {/* Per-algorithm hyperparameter sliders */}
+            {algoHyperparams.map((key) => {
+              const cfg = HYPERPARAM_META[key];
+              if (!cfg) return null;
+              return (
+                <Slider
+                  key={key}
+                  label={cfg.label}
+                  value={hyperparams[key] ?? cfg.min}
+                  min={cfg.min}
+                  max={cfg.max}
+                  step={cfg.step}
+                  onChange={(v) => handleHyperparamChange(key, v)}
+                  format={cfg.format ?? ((v) => v.toFixed(2))}
+                />
+              );
+            })}
           </div>
 
           {/* Seed */}

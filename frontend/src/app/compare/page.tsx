@@ -1,6 +1,11 @@
 "use client";
 
-import { CumRewardsChart, DualRegretChart, PullDistChart, RegretLineChart } from "@/components/charts";
+import {
+  CumRewardsChart,
+  DualRegretChart,
+  PullDistChart,
+  RegretLineChart,
+} from "@/components/charts";
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { PageShell } from "@/components/layout/PageShell";
 import { AlgorithmSelector } from "@/components/shared/AlgorithmSelector";
@@ -10,7 +15,12 @@ import { TruthToggle } from "@/components/shared/TruthToggle";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { api } from "@/lib/api";
 import type { ApiRunResponse, SimStateResponse } from "@/lib/api";
-import { ALGO_META, createDefaultSimState, DEFAULT_ARMS } from "@/lib/constants";
+import {
+  ALGO_META,
+  DEFAULT_HYPERPARAMS,
+  createDefaultSimState,
+  DEFAULT_ARMS,
+} from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -23,7 +33,7 @@ export default function ComparePage() {
   const [ids, setIds] = useState<{ a: string; b: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [speed, setSpeed] = useState(2);
+  const [speed, setSpeed] = useState(0.5);
 
   // Use a ref to avoid the initSims ← setIds → initSims re-creates → effect re-fires loop
   const idsRef = useRef(ids);
@@ -48,19 +58,27 @@ export default function ComparePage() {
           api.createSimulation(
             DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
             algoAval,
-            { alpha: 2.0 },
+            { ...DEFAULT_HYPERPARAMS[algoAval] },
             99,
           ),
           api.createSimulation(
             DEFAULT_ARMS.map((a) => ({ id: a.id, label: a.label, true_prob: a.trueProb })),
             algoBval,
-            { alpha: 2.0 },
+            { ...DEFAULT_HYPERPARAMS[algoBval] },
             99,
           ),
         ]);
         setIds({ a: ra.id, b: rb.id });
-        setSimA(ra.state as SimStateResponse);
-        setSimB(rb.state as SimStateResponse);
+        setSimA({
+          ...(ra.state as SimStateResponse),
+          hyperparams: { ...DEFAULT_HYPERPARAMS[algoAval] },
+          algorithm: algoAval,
+        });
+        setSimB({
+          ...(rb.state as SimStateResponse),
+          hyperparams: { ...DEFAULT_HYPERPARAMS[algoBval] },
+          algorithm: algoBval,
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to initialize");
       }

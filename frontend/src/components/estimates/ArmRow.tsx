@@ -23,9 +23,10 @@ export function ArmRow({
   const { mean = 0, bonus = 0, sample } = score ?? {};
   const barMax = Math.max(maxScore * 1.1, 1);
 
+  const bonusBasedAlgos = ["ucb1", "linucb", "linucb_hybrid", "linucb_sw", "logistic_ucb", "gp_ucb", "random_forest_ucb", "bootstrapped_ucb"];
   const meanPct = Math.min((mean / barMax) * 100, 100);
   const bonusPct =
-    (algorithm === "ucb1" || algorithm === "linucb") && bonus > 0
+    bonusBasedAlgos.includes(algorithm) && bonus > 0
       ? Math.min((bonus / barMax) * 100, 100 - meanPct)
       : 0;
 
