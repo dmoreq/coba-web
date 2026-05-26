@@ -1,5 +1,6 @@
 """Simulation lifecycle routes with dependency injection."""
 
+import asyncio
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -64,7 +65,8 @@ async def run_simulation(
     service: SimulationService = Depends(get_simulation_service),
 ) -> RunResponse:
     try:
-        return service.run(sim_id, req.steps)
+        # Run CPU-bound steps in thread pool to avoid blocking event loop
+        return await asyncio.to_thread(service.run, sim_id, req.steps)
     except ValueError:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
