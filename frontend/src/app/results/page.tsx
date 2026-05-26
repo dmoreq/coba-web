@@ -3,20 +3,21 @@
 import { RegretLineChart } from "@/components/charts";
 import { PageShell } from "@/components/layout/PageShell";
 import { StatCard } from "@/components/ui";
-import { ALGO_META } from "@/lib/constants";
+import { ALGO_META, CONTEXTUAL_ALGORITHMS } from "@/lib/constants";
 import { useSimulationStore } from "@/store/simulation";
 import { useRouter } from "next/navigation";
 
 export default function ResultsPage() {
   const router = useRouter();
   const simState = useSimulationStore((s) => s.simState);
-  const { arms, armStates, t, regretHistory, history, algorithm } = simState ?? {
+  const { arms, armStates, t, regretHistory, history, algorithm, featureNames } = simState ?? {
     arms: [],
     armStates: [],
     t: 0,
     regretHistory: [],
     history: [],
     algorithm: "ucb1" as const,
+    featureNames: [],
   };
 
   if (t === 0) {
@@ -42,7 +43,24 @@ export default function ResultsPage() {
   const cumRegret = regretHistory[regretHistory.length - 1] || 0;
   const totalRewards = armStates.reduce((s, a) => s + a.successes, 0);
   const avgReward = totalRewards / t;
-  const bestArmIdx = arms.reduce((b, _, i) => (arms[i].trueProb > arms[b].trueProb ? i : b), 0);
+
+  // Compute context-averaged true rates for contextual algorithms
+  const isContextual = CONTEXTUAL_ALGORITHMS.has(algorithm);
+  const trueRates = isContextual
+    ? arms.map((_, i) => {
+        const stepsThatHaveTrueProbs = history.filter(
+          (step) => step.allTrueProbs && step.allTrueProbs.length > i,
+        );
+        if (stepsThatHaveTrueProbs.length === 0) return arms[i].trueProb;
+        const sum = stepsThatHaveTrueProbs.reduce(
+          (acc, step) => acc + (step.allTrueProbs?.[i] ?? 0),
+          0,
+        );
+        return sum / stepsThatHaveTrueProbs.length;
+      })
+    : arms.map((arm) => arm.trueProb);
+
+  const bestArmIdx = trueRates.reduce((b, _, i) => (trueRates[i] > trueRates[b] ? i : b), 0);
   const bestArm = arms[bestArmIdx];
   const meta = ALGO_META[algorithm] || ALGO_META.ucb1;
 
@@ -55,6 +73,39 @@ export default function ResultsPage() {
       break;
     }
   }
+
+  // Segment breakdown (if contextual with context segments visible)
+  const segmentBreakdown = isContextual
+    ? history.reduce(
+        (acc, step) => {
+          if (step.contextSegment) {
+            if (!acc[step.contextSegment]) {
+              acc[step.contextSegment] = {
+                count: 0,
+                rewards: 0,
+                bestArmPulls: 0,
+                allTrueProbs: arms.map(() => 0),
+              };
+            }
+            acc[step.contextSegment].count++;
+            acc[step.contextSegment].rewards += step.outcome;
+            if (step.chosenIdx === bestArmIdx) {
+              acc[step.contextSegment].bestArmPulls++;
+            }
+            if (step.allTrueProbs) {
+              step.allTrueProbs.forEach((prob, i) => {
+                acc[step.contextSegment].allTrueProbs[i] += prob;
+              });
+            }
+          }
+          return acc;
+        },
+        {} as Record<
+          string,
+          { count: number; rewards: number; bestArmPulls: number; allTrueProbs: number[] }
+        >,
+      )
+    : {};
 
   return (
     <PageShell>
@@ -112,7 +163,8 @@ export default function ResultsPage() {
           {arms.map((arm, i) => {
             const st = armStates[i];
             const mean = st.n === 0 ? 0 : st.successes / st.n;
-            const err = Math.abs(mean - arm.trueProb);
+            const trueRate = trueRates[i];
+            const err = Math.abs(mean - trueRate);
             return (
               <div
                 key={arm.id}
@@ -138,11 +190,13 @@ export default function ResultsPage() {
                   className="w-[38px] text-right font-mono text-[11px] font-semibold"
                   style={{ color: arm.color }}
                 >
-                  {(arm.trueProb * 100).toFixed(0)}%
+                  {(trueRate * 100).toFixed(0)}%
                 </div>
                 <div
                   className="w-[60px] text-right text-[11px] font-mono tabular-nums"
-                  style={{ color: err < 0.05 ? "#2f9e44" : err < 0.15 ? "#f08c00" : "#c92a2a" }}
+                  style={{
+                    color: err < 0.05 ? "#2f9e44" : err < 0.15 ? "#f08c00" : "#c92a2a",
+                  }}
                 >
                   ±{(err * 100).toFixed(1)}%
                 </div>
@@ -162,6 +216,48 @@ export default function ResultsPage() {
           })}
         </div>
 
+        {/* Segment breakdown for contextual algorithms */}
+        {isContextual && Object.keys(segmentBreakdown).length > 0 && (
+          <div className="bg-white border border-gray-3 rounded-md p-lg mb-3">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-6 mb-3">
+              Performance by User Segment
+            </div>
+            <div className="space-y-[12px]">
+              {Object.entries(segmentBreakdown).map(([segmentName, data]) => {
+                const segmentRate = data.count > 0 ? data.rewards / data.count : 0;
+                const bestArmRate =
+                  data.count > 0 ? data.bestArmPulls / data.count : 0;
+                return (
+                  <div key={segmentName} className="border border-gray-2 rounded-sm p-[10px]">
+                    <div className="flex items-center justify-between mb-[6px]">
+                      <span className="font-semibold text-gray-8 text-[12px]">
+                        {segmentName}
+                      </span>
+                      <span className="text-[10px] text-gray-5">
+                        n={data.count} ({((data.count / t) * 100).toFixed(0)}%)
+                      </span>
+                    </div>
+                    <div className="flex gap-[10px] text-[11px]">
+                      <div className="flex-1">
+                        <span className="text-gray-6">Learned rate: </span>
+                        <span className="font-mono font-semibold text-gray-8">
+                          {(segmentRate * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex-1">
+                        <span className="text-gray-6">{bestArm.label} pulls: </span>
+                        <span className="font-mono font-semibold text-gray-8">
+                          {(bestArmRate * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white border border-gray-3 rounded-md p-lg mb-3">
           <div className="text-[11px] font-semibold uppercase tracking-[0.07em] text-gray-6 mb-[10px]">
             Narrative
@@ -170,8 +266,8 @@ export default function ResultsPage() {
             After {t} steps using <strong style={{ color: meta.color }}>{meta.label}</strong>, the
             algorithm accumulated a cumulative regret of <strong>{cumRegret.toFixed(2)}</strong>.
             The best arm (<strong style={{ color: bestArm.color }}>{bestArm.label}</strong>, true
-            rate {(bestArm.trueProb * 100).toFixed(0)}%) received {armStates[bestArmIdx].n} pulls (
-            {((armStates[bestArmIdx].n / t) * 100).toFixed(0)}% of decisions).
+            rate {(trueRates[bestArmIdx] * 100).toFixed(0)}%) received {armStates[bestArmIdx].n}{" "}
+            pulls ({((armStates[bestArmIdx].n / t) * 100).toFixed(0)}% of decisions).
             {convergenceStep
               ? ` The algorithm converged to preferring the best arm around step ${convergenceStep}.`
               : " The algorithm is still exploring — run more steps to see convergence."}
