@@ -10,7 +10,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: "cd ../backend && uv run uvicorn coba_server.main:app --port 8000",
+      command: "cd ../backend && uv run uvicorn coba_server:app --port 8000",
       port: 8000,
       reuseExistingServer: true,
     },

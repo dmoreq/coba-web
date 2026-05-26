@@ -12,7 +12,7 @@ dev: dev-backend dev-frontend
 
 dev-backend:
 	@echo "Starting backend on :$(BACKEND_PORT)..."
-	@cd backend && uv run uvicorn coba_server.main:app --reload --port $(BACKEND_PORT) &
+	@cd backend && uv run uvicorn coba_server:app --reload --port $(BACKEND_PORT) &
 	@echo $$! > $(PID_FILE)
 	@sleep 2
 	@echo "Backend ready at http://localhost:$(BACKEND_PORT)"
