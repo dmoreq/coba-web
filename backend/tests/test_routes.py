@@ -21,6 +21,42 @@ class TestCreateSimulation:
         assert r.status_code == 201
         assert "id" in r.json()
 
+    def test_with_hyperparams_bag(self, client):
+        """Create a simulation with full hyperparams bag for a contextual algorithm."""
+        r = client.post(
+            "/api/simulate",
+            json={
+                "arms": _arms_2(),
+                "algorithm": "linucb",
+                "hyperparams": {"alpha": 3.0, "l2_lambda": 2.0, "gamma": 0.95, "n_clusters": 7},
+                "seed": 99,
+            },
+        )
+        assert r.status_code == 201
+        data = r.json()
+        assert data["algorithm"] == "linucb"
+        assert data["seed"] == 99
+
+    def test_exceeds_max_simulations(self, client):
+        """Creating >100 sims should return 400.
+        Uses a separate client-backed adapter by creating via the API."""
+        arms = [{"id": "x", "label": "X", "true_prob": 0.5}] * 2
+        created_ids = []
+        try:
+            for _ in range(105):
+                r = client.post("/api/simulate", json={"arms": arms, "algorithm": "ucb1"})
+                if r.status_code == 201:
+                    created_ids.append(r.json()["id"])
+                if r.status_code == 400:
+                    assert "Maximum" in r.json()["detail"]
+                    break
+            else:
+                assert False, "Never hit the cap after 105 attempts"
+        finally:
+            # Clean up all created sims so other tests aren't affected
+            for sid in created_ids:
+                client.delete(f"/api/simulate/{sid}")
+
     def test_invalid_body_422(self, client):
         assert client.post("/api/simulate", json={}).status_code == 422
 
@@ -76,6 +112,15 @@ class TestDelete:
         client.delete(f"/api/simulate/{sid}")
         assert client.get(f"/api/simulate/{sid}").status_code == 404
 
+    def test_delete_nonexistent_returns_204(self, client):
+        """DELETE is idempotent — unknown sim returns 204."""
+        assert (
+            client.delete(
+                "/api/simulate/00000000-0000-0000-0000-000000000000",
+            ).status_code
+            == 204
+        )
+
 
 class TestAlgorithms:
     def test_returns_list(self, client):
@@ -109,24 +154,18 @@ class TestCors:
 
     def test_cors_restricts_http_methods(self, client):
         """Verify CORS configuration only allows safe methods."""
-        # Create a simulation first
         arms = [{"id": "a", "label": "A", "true_prob": 0.5}] * 2
         r_create = client.post("/api/simulate", json={"arms": arms})
         sim_id = r_create.json()["id"]
 
-        # Test preflight with Origin header
         r_options = client.options(
             f"/api/simulate/{sim_id}",
             headers={"Origin": "http://localhost:3000"},
         )
-        # CORS should be enabled
         assert "access-control-allow-origin" in r_options.headers
 
-        # Check if allow-methods header exists and verify it doesn't use wildcard
         if "access-control-allow-methods" in r_options.headers:
             methods = r_options.headers["access-control-allow-methods"].upper()
-            # Should not be the overly-permissive wildcard
             assert methods != "*", "CORS allow-methods should not be * for security"
-            # Should not explicitly allow unsafe methods
             for unsafe in ["PUT", "PATCH"]:
                 assert unsafe not in methods

@@ -134,3 +134,122 @@ class TestCobaLibraryAdapter:
             "All arms must be chosen at least once during the first 9 steps; "
             f"only saw {chosen_idxs}"
         )
+
+
+class TestHyperparamsPassthrough:
+    """Verify hyperparameters are accepted by ClusterBandit without error."""
+
+    @pytest.fixture
+    def adapter(self):
+        return CobaLibraryAdapter()
+
+    def test_empty_hyperparams_all_algorithms(self, adapter):
+        """Every ClusterBandit algo must create and step without crashing
+        using empty hyperparams.
+        """
+        for algo in CLUSTER_BANDIT_ALGORITHMS:
+            h = adapter.create(TWO_ARMS, algo, {}, 42)
+            r = adapter.step(h)
+            assert r.t == 1, f"{algo}: step must succeed with empty hyperparams"
+
+    def test_n_clusters_respected(self, adapter):
+        """Cluster count should be configurable — full hyperparams bag."""
+        h = adapter.create(TWO_ARMS, "linucb", {"n_clusters": 3, "alpha": 2.0}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_alpha_respected_ucb1(self, adapter):
+        """UCB1 accepts alpha hyperparameter."""
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 5.0}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_l2_lambda_respected_linucb(self, adapter):
+        """LinUCB accepts l2_lambda hyperparameter."""
+        h = adapter.create(TWO_ARMS, "linucb", {"l2_lambda": 0.5}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_gamma_respected_linucb(self, adapter):
+        """LinUCB accepts gamma hyperparameter."""
+        h = adapter.create(TWO_ARMS, "linucb", {"gamma": 0.9}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_v_sq_respected_lints(self, adapter):
+        """LinTS accepts v_sq hyperparameter."""
+        h = adapter.create(TWO_ARMS, "lints", {"v_sq": 2.0}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_n_bootstraps_respected(self, adapter):
+        """Bootstrapped TS accepts n_bootstraps hyperparameter."""
+        h = adapter.create(TWO_ARMS, "bootstrapped_ts", {"n_bootstraps": 5}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_linucb_sw_accepts_basic_params(self, adapter):
+        """Sliding-window LinUCB works with valid ClusterBandit params."""
+        h = adapter.create(TWO_ARMS, "linucb_sw", {"alpha": 2.0}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_softmax_accepts_basic_params(self, adapter):
+        """Softmax works with valid ClusterBandit params."""
+        h = adapter.create(TWO_ARMS, "softmax", {}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_rf_accepts_basic_params(self, adapter):
+        """Random Forest works with valid ClusterBandit params."""
+        h = adapter.create(TWO_ARMS, "random_forest_ucb", {"alpha": 2.0}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_gp_ucb_full_config(self, adapter):
+        """GP-UCB accepts all hyperparameters."""
+        h = adapter.create(
+            TWO_ARMS,
+            "gp_ucb",
+            {
+                "gp_beta": 3.0,
+                "gp_length_scale": 0.5,
+                "gp_noise_var": 0.05,
+                "gp_max_obs": 300,
+            },
+            42,
+        )
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_neural_linear_config(self, adapter):
+        """Neural Linear accepts embedding and retrain frequency."""
+        h = adapter.create(
+            TWO_ARMS,
+            "neural_linear",
+            {
+                "neural_embedding_dim": 8,
+                "neural_retrain_freq": 100,
+            },
+            42,
+        )
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
+
+    def test_n_bootstraps_respected_linucb_sw(self, adapter):
+        """Sliding-window LinUCB with n_bootstraps works."""
+        h = adapter.create(TWO_ARMS, "linucb_sw", {"alpha": 2.0, "n_bootstraps": 5}, 42)
+        for _ in range(5):
+            adapter.step(h)
+        assert adapter.get_state(h).t == 5
