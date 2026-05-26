@@ -1,6 +1,6 @@
 "use client";
 
-import { AlgoStrip, ConceptCards, Hero, HowItWorks } from "@/components/landing";
+import { AlgoStrip, ConceptCards, Hero, HowItWorks, ScenarioShowcase } from "@/components/landing";
 import { PageShell } from "@/components/layout/PageShell";
 import { useRouter } from "next/navigation";
 
@@ -14,6 +14,7 @@ export default function LandingPage() {
         <AlgoStrip />
         <div className="px-[48px] py-[32px]">
           <ConceptCards />
+          <ScenarioShowcase />
           <HowItWorks />
           <div className="text-center pb-lg">
             <button

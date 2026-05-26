@@ -114,6 +114,24 @@ const TERMS = [
       "ClusterBandit (from the coba library) uses KMeans to partition the context space into n_clusters regions. Each cluster maintains its own arm models. This lets the bandit capture non-linear reward structures without a fully non-linear model.",
     formula: "cluster_k = KMeans(n_clusters=5)",
   },
+  {
+    term: "Scenario",
+    tag: "Coba-Edu",
+    tagColor: "#7950f2",
+    short: "A real-world problem domain with named context features, arms, and reward dynamics.",
+    detail:
+      "Coba-Edu includes five scenarios: Notification Channels (marketing), News Feed (content), Product Recommendations (e-commerce), Content Format (media with drift), and Ad Creative Selection (advertising). Each scenario defines feature interpretations, population segments, and reward profiles to simulate realistic user behavior.",
+    formula: "scenario = { features, arms, reward_profiles, segments }",
+  },
+  {
+    term: "Concept Drift",
+    tag: "Advanced",
+    tagColor: "#f76707",
+    short: "When the reward function changes over time — the best arm shifts.",
+    detail:
+      "Non-stationary environments where the underlying distribution shifts. Sliding-window LinUCB and drift-detection algorithms handle this by forgetting old data or detecting when rewards have changed. The Content Format scenario demonstrates drift: short-form video dominates early, but long-form articles surge later.",
+    formula: "p_i(t) ≠ p_i(t')",
+  },
 ];
 
 function GlossaryCard({
