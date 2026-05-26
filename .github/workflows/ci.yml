@@ -14,8 +14,12 @@ jobs:
           python-version: "3.12"
           enable-cache: true
       - run: uv sync --frozen
+        env:
+          VIRTUAL_ENV: ""
       - run: uvx ruff check src/
       - run: uv run pytest -v
+        env:
+          VIRTUAL_ENV: ""
 
   frontend:
     runs-on: ubuntu-latest
