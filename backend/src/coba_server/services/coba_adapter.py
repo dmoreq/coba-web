@@ -34,11 +34,10 @@ def _sig(x: float) -> float:
 
 
 def _sample_beta(a: float, b: float, rng: np.random.Generator) -> float:
-    aa, bb = max(a, 0.05), max(b, 0.05)
-    mean = aa / (aa + bb)
-    variance = (aa * bb) / ((aa + bb) ** 2 * (aa + bb + 1))
-    z = float(rng.normal())
-    return max(0.001, min(0.999, mean + math.sqrt(variance) * z))
+    # Use numpy's exact Beta distribution sampling
+    # Clamp small values to avoid numerical issues
+    aa, bb = max(a, 0.01), max(b, 0.01)
+    return float(rng.beta(aa, bb))
 
 
 def _inv2x2(a_mat: list[list[float]]) -> list[list[float]]:
