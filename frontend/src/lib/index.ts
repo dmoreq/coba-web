@@ -2,8 +2,6 @@ export {
   ALGO_META,
   DEFAULT_SEED,
   DEFAULT_SPEED,
-  DEFAULT_ALPHA,
-  DEFAULT_EPSILON,
   MAX_HISTORY_LENGTH,
   createDefaultSimState,
 } from "./constants";

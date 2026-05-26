@@ -52,18 +52,36 @@ export interface SimState {
   algorithm: AlgorithmId;
   alpha: number;
   epsilon: number;
+  hyperparams: Record<string, number>;
   t: number;
   history: StepRecord[];
   regretHistory: number[];
 }
 
-export type AlgorithmId = "ucb1" | "epsilon_greedy" | "thompson" | "linucb";
+export type AlgorithmId =
+  | "ucb1"
+  | "epsilon_greedy"
+  | "thompson"
+  | "linucb"
+  | "lints"
+  | "linucb_hybrid"
+  | "linucb_sw"
+  | "softmax"
+  | "neural_linear"
+  | "bootstrapped_ts"
+  | "bootstrapped_ucb"
+  | "logistic_ucb"
+  | "logistic_ts"
+  | "gp_ucb"
+  | "random_forest_ucb"
+  | "random_forest_ts";
 
 export interface AlgoMeta {
   label: string;
   color: string;
   light: string;
   desc: string;
+  hyperparams: string[];
 }
 
 export type RngFn = () => number;

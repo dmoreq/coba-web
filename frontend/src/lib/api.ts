@@ -64,7 +64,7 @@ export interface ApiSimState {
   regretHistory: number[];
 }
 
-export type SimStateResponse = ApiSimState;
+export type SimStateResponse = ApiSimState & { hyperparams: Record<string, number> };
 
 /** Response from POST /simulate/{id}/step */
 export interface ApiStepResponse {
