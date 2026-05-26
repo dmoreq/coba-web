@@ -5,11 +5,10 @@ Swappable via di.py — toggle USE_COBA_LIBRARY.
 
 from __future__ import annotations
 
-from typing import ClassVar
-
 import numpy as np
 from coba import ClusterBandit, PolicyType
 
+from coba_server.models.algorithms import ALGORITHM_META
 from coba_server.models.simulation import (
     AlgorithmId,
     ArmConfig,
@@ -41,29 +40,6 @@ def _sig(x: float) -> float:
 
 class CobaLibraryAdapter(CobaAdapter):
     """Wraps coba's ClusterBandit. Each handle = one ClusterBandit instance."""
-
-    ALGORITHM_META: ClassVar[dict[str, dict]] = {
-        "ucb1": {
-            "label": "UCB1",
-            "description": "Optimistic — uncertainty bonus",
-            "hyperparams": ["alpha"],
-        },
-        "epsilon_greedy": {
-            "label": "ε-Greedy",
-            "description": "Random exploration with prob ε",
-            "hyperparams": ["epsilon"],
-        },
-        "thompson": {
-            "label": "Thompson Sampling",
-            "description": "Bayesian Beta posteriors",
-            "hyperparams": [],
-        },
-        "linucb": {
-            "label": "LinUCB",
-            "description": "Contextual linear UCB",
-            "hyperparams": ["alpha"],
-        },
-    }
 
     def __init__(self) -> None:
         self._next_handle: int = 0
@@ -237,4 +213,4 @@ class CobaLibraryAdapter(CobaAdapter):
             d.pop(handle, None)
 
     def get_supported_algorithms(self) -> list[dict]:
-        return [{"id": k, **v} for k, v in self.ALGORITHM_META.items()]
+        return [{"id": k, **v} for k, v in ALGORITHM_META.items()]

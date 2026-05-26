@@ -6,10 +6,10 @@ No external library dependencies beyond numpy.
 from __future__ import annotations
 
 import math
-from typing import ClassVar
 
 import numpy as np
 
+from coba_server.models.algorithms import ALGORITHM_META
 from coba_server.models.simulation import (
     AlgorithmId,
     ArmConfig,
@@ -101,29 +101,6 @@ def _score_linucb(lin_meta: dict, context: list[float], alpha: float) -> Score:
 
 class InMemoryCobaAdapter(CobaAdapter):
     """Stateless adapter — same 4 algorithms as the TypeScript engine."""
-
-    ALGORITHM_META: ClassVar[dict[str, dict]] = {
-        "ucb1": {
-            "label": "UCB1",
-            "description": "Optimistic — uncertainty bonus",
-            "hyperparams": ["alpha"],
-        },
-        "epsilon_greedy": {
-            "label": "ε-Greedy",
-            "description": "Random exploration with prob ε",
-            "hyperparams": ["epsilon"],
-        },
-        "thompson": {
-            "label": "Thompson Sampling",
-            "description": "Bayesian Beta posteriors",
-            "hyperparams": [],
-        },
-        "linucb": {
-            "label": "LinUCB",
-            "description": "Contextual linear UCB",
-            "hyperparams": ["alpha"],
-        },
-    }
 
     def __init__(self) -> None:
         self._next_handle: int = 0
@@ -277,4 +254,4 @@ class InMemoryCobaAdapter(CobaAdapter):
             d.pop(handle, None)
 
     def get_supported_algorithms(self) -> list[dict]:
-        return [{"id": k, **v} for k, v in self.ALGORITHM_META.items()]
+        return [{"id": k, **v} for k, v in ALGORITHM_META.items()]
