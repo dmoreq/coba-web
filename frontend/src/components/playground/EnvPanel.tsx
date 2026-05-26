@@ -1,6 +1,8 @@
 "use client";
 
+import { ContextPanel } from "@/components/playground/ContextPanel";
 import { TruthToggle } from "@/components/shared/TruthToggle";
+import { CONTEXTUAL_ALGORITHMS } from "@/lib/constants";
 import type { SimState } from "@/lib/types";
 import { memo } from "react";
 
@@ -23,9 +25,10 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
         <TruthToggle revealed={showGroundTruth} onToggle={onToggle} />
       </div>
 
-      {algorithm === "linucb" && lastStep?.context && (
-        <div className="mb-sm px-[10px] py-[6px] rounded-sm bg-violet-0 text-[11px] text-violet-6 font-mono">
-          Context: age={lastStep.context[0].toFixed(3)}, mobile={lastStep.context[1].toFixed(3)}
+      {/* Show ContextPanel for all contextual algorithms */}
+      {CONTEXTUAL_ALGORITHMS.has(algorithm) && (
+        <div className="mb-sm">
+          <ContextPanel simState={simState} contextSegment={lastStep?.contextSegment ?? null} />
         </div>
       )}
 
@@ -62,7 +65,7 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
               )}
             </div>
             <div className="w-[88px] text-right font-mono text-[11px] text-gray-6 flex-shrink-0 tabular-nums">
-              {mean !== null ? `${(mean * 100).toFixed(1)}%` : "\u2014"}
+              {mean !== null ? `${(mean * 100).toFixed(1)}%` : "—"}
               <span className="text-gray-4 ml-[5px]">n={st.n}</span>
             </div>
             {showGroundTruth && (

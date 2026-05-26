@@ -72,7 +72,13 @@ export default function PlaygroundPage() {
         onSpeedChange={storeSetSpeed}
       />
       <div className="flex-1 flex overflow-hidden">
-        <StepFeed history={display.history} arms={display.arms} t={display.t} />
+        <StepFeed
+          history={display.history}
+          arms={display.arms}
+          t={display.t}
+          featureNames={display.featureNames}
+          featureLabels={display.featureLabels}
+        />
         <div className="flex-1 overflow-y-auto p-lg bg-surface-page flex flex-col gap-[10px]">
           {isLoading && (
             <div className="text-center text-gray-5 text-[12px] py-4">Running simulation...</div>

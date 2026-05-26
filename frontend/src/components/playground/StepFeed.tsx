@@ -8,9 +8,17 @@ interface StepFeedProps {
   history: StepRecord[];
   arms: Arm[];
   t: number;
+  featureNames?: string[];
+  featureLabels?: string[];
 }
 
-function StepFeedComponent({ history, arms, t }: StepFeedProps) {
+function StepFeedComponent({
+  history,
+  arms,
+  t,
+  featureNames = [],
+  featureLabels = [],
+}: StepFeedProps) {
   const recentSteps = useMemo(() => [...history].reverse().slice(0, 14), [history]);
 
   return (
@@ -26,7 +34,14 @@ function StepFeedComponent({ history, arms, t }: StepFeedProps) {
       </div>
       <div className="flex-1 overflow-y-auto p-[8px]">
         {recentSteps.map((step) => (
-          <StepFeedEntry key={step.t} step={step} arms={arms} compact={false} />
+          <StepFeedEntry
+            key={step.t}
+            step={step}
+            arms={arms}
+            compact={false}
+            featureNames={featureNames}
+            featureLabels={featureLabels}
+          />
         ))}
       </div>
     </div>

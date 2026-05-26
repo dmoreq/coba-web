@@ -256,6 +256,23 @@ export const DEFAULT_SEED = 42;
 export const DEFAULT_SPEED = 0.5;
 export const MAX_HISTORY_LENGTH = 150;
 
+/** Algorithms that use context — show context panel */
+export const CONTEXTUAL_ALGORITHMS = new Set([
+  "linucb",
+  "lints",
+  "linucb_hybrid",
+  "linucb_sw",
+  "logistic_ucb",
+  "logistic_ts",
+  "neural_linear",
+  "bootstrapped_ts",
+  "bootstrapped_ucb",
+  "gp_ucb",
+  "softmax",
+  "random_forest_ucb",
+  "random_forest_ts",
+]);
+
 /**
  * Create a default empty SimState for initialization.
  */

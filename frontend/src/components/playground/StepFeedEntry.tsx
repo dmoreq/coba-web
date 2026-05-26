@@ -1,15 +1,25 @@
 import type { Arm, StepRecord } from "@/lib/types";
-import { memo } from "react";
+import { memo, useState } from "react";
 
 interface StepFeedEntryProps {
   step: StepRecord;
   arms: Arm[];
   compact?: boolean;
+  featureNames?: string[];
+  featureLabels?: string[];
 }
 
-export function StepFeedEntry({ step, arms, compact = false }: StepFeedEntryProps) {
+function StepFeedEntryComponent({
+  step,
+  arms,
+  compact = false,
+  featureNames = [],
+  featureLabels = [],
+}: StepFeedEntryProps) {
   const chosen = arms[step.chosenIdx];
   const isReward = step.outcome === 1;
+  const [showContext, setShowContext] = useState(false);
+  const hasContext = step.context && featureNames.length > 0;
 
   return (
     <div className="p-[8px_10px] rounded-sm mb-1 border border-gray-2 bg-white text-[12px] font-sans">
@@ -42,6 +52,34 @@ export function StepFeedEntry({ step, arms, compact = false }: StepFeedEntryProp
         )}
       </div>
 
+      {/* Context */}
+      {hasContext && !compact && (
+        <div className="mt-[6px]">
+          <button
+            type="button"
+            onClick={() => setShowContext(!showContext)}
+            className="text-[9px] text-violet-6 cursor-pointer font-medium hover:underline"
+          >
+            {showContext ? "▼" : "▶"} context
+          </button>
+          {showContext && (
+            <div className="mt-[5px] ml-[8px] space-y-[3px] text-[10px] font-mono text-gray-6">
+              {step.context?.map((val, i) => (
+                <div key={i}>
+                  <span className="font-medium">{featureLabels[i] || featureNames[i]}:</span>{" "}
+                  {val.toFixed(2)}
+                </div>
+              ))}
+              {step.contextSegment && (
+                <div className="text-[9px] text-violet-6 font-medium">
+                  segment: {step.contextSegment}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Regret */}
       {!compact && step.cumRegret !== undefined && (
         <div className="mt-1 text-[10px] text-gray-5 flex gap-sm">
@@ -52,3 +90,5 @@ export function StepFeedEntry({ step, arms, compact = false }: StepFeedEntryProp
     </div>
   );
 }
+
+export const StepFeedEntry = memo(StepFeedEntryComponent);
