@@ -1,6 +1,11 @@
 "use client";
 
-import { CumRewardsChart, PullDistChart, RegretLineChart } from "@/components/charts";
+import {
+  ContextScatterPlot,
+  CumRewardsChart,
+  PullDistChart,
+  RegretLineChart,
+} from "@/components/charts";
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { PageShell } from "@/components/layout/PageShell";
 import { ControlBar } from "@/components/playground/ControlBar";
@@ -102,6 +107,21 @@ export default function PlaygroundPage() {
             <UCBDisplay simState={display} showGroundTruth={showGT} />
           </Panel>
           {display.history.length > 0 && <WhyPanel simState={display} />}
+          {display.featureNames.length === 2 && (
+            <div className="bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
+                Context Space
+              </div>
+              <ContextScatterPlot
+                history={display.history}
+                arms={display.arms}
+                featureNames={display.featureNames}
+                featureLabels={display.featureLabels}
+                width={620}
+                height={280}
+              />
+            </div>
+          )}
           <div className="flex gap-[10px]">
             <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
