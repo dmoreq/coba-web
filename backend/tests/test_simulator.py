@@ -109,3 +109,18 @@ class TestSimulationService:
         service.run(sim_ucb1.id, 50)
         results = service.get_results(sim_ucb1.id)
         assert results.total_steps == 50 and results.cumulative_regret > 0
+
+    def test_contextual_results_use_observed_true_probabilities(self, service):
+        """Contextual algorithms should report context-derived truth, not static arm.true_prob."""
+        arms = [
+            ArmConfig(id="a", label="A", true_prob=0.01),
+            ArmConfig(id="b", label="B", true_prob=0.01),
+            ArmConfig(id="c", label="C", true_prob=0.01),
+            ArmConfig(id="d", label="D", true_prob=0.01),
+        ]
+        sim = service.create(CreateSimRequest(arms=arms, algorithm="linucb", seed=42))
+        service.run(sim.id, 30)
+        results = service.get_results(sim.id)
+        true_values = [row["true"] for row in results.accuracy_table]
+        assert any(v != 0.01 for v in true_values)
+        assert results.best_arm_found in {a.label for a in arms}

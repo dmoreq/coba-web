@@ -10,6 +10,25 @@ TWO_ARMS = [
     ArmConfig(id="b", label="B", true_prob=0.6),
 ]
 
+CLUSTER_BANDIT_ALGORITHMS = (
+    "ucb1",
+    "epsilon_greedy",
+    "thompson",
+    "linucb",
+    "lints",
+    "linucb_hybrid",
+    "neural_linear",
+    "bootstrapped_ts",
+    "bootstrapped_ucb",
+    "logistic_ucb",
+    "logistic_ts",
+    "gp_ucb",
+    "softmax",
+    "linucb_sw",
+    "random_forest_ucb",
+    "random_forest_ts",
+)
+
 
 @pytest.fixture
 def adapter():
@@ -30,10 +49,11 @@ class TestCobaLibraryAdapter:
         r = adapter.step(h)
         assert r.t == 1 and adapter.get_state(h).t == 1
 
-    def test_step_supports_all_algorithms(self, adapter):
-        """All four algorithm IDs must complete a step without error."""
-        for algo in ("ucb1", "epsilon_greedy", "thompson", "linucb"):
+    def test_step_supports_all_cluster_bandit_algorithms(self, adapter):
+        """Every discrete ClusterBandit policy exposed by coba must complete a step."""
+        for algo in CLUSTER_BANDIT_ALGORITHMS:
             h = adapter.create(TWO_ARMS, algo, {}, 42)
+            assert adapter._bandits[h].policy.value == algo
             r = adapter.step(h)
             assert r.outcome in (0, 1), f"{algo}: outcome must be binary"
 
@@ -58,6 +78,28 @@ class TestCobaLibraryAdapter:
             r = adapter.step(h)
         for score in r.scores:
             assert score.score < float("inf"), "score must be finite (inf should be capped at 99)"
+
+    def test_linucb_supports_more_than_three_arms(self, adapter):
+        """Contextual reward profiles must be generated for all configured arms."""
+        arms = [ArmConfig(id=str(i), label=f"A{i}", true_prob=0.1 + 0.05 * i) for i in range(6)]
+        h = adapter.create(arms, "linucb", {"alpha": 2.0}, 42)
+        for _ in range(12):
+            r = adapter.step(h)
+            assert 0 <= r.chosen_idx < len(arms)
+            assert r.all_true_probs is not None
+            assert len(r.all_true_probs) == len(arms)
+            assert r.optimal_idx is not None
+            assert 0 <= r.optimal_idx < len(arms)
+
+    def test_chosen_arm_score_uses_coba_breakdown(self, adapter):
+        """Chosen-arm score should use coba's BanditDecision score_breakdown."""
+        h = adapter.create(TWO_ARMS, "ucb1", {"alpha": 2.0}, 42)
+        for _ in range(10):
+            r = adapter.step(h)
+        chosen_score = r.scores[r.chosen_idx]
+        assert chosen_score.formula.startswith("coba")
+        assert chosen_score.mean >= 0
+        assert chosen_score.bonus >= 0
 
     def test_regret_history_capped(self, adapter):
         """regret_history must not grow beyond MAX_HISTORY_LENGTH entries."""

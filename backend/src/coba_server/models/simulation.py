@@ -7,7 +7,24 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-AlgorithmId = Literal["ucb1", "epsilon_greedy", "thompson", "linucb"]
+AlgorithmId = Literal[
+    "ucb1",
+    "epsilon_greedy",
+    "thompson",
+    "linucb",
+    "lints",
+    "linucb_hybrid",
+    "neural_linear",
+    "bootstrapped_ts",
+    "bootstrapped_ucb",
+    "logistic_ucb",
+    "logistic_ts",
+    "gp_ucb",
+    "softmax",
+    "linucb_sw",
+    "random_forest_ucb",
+    "random_forest_ts",
+]
 
 
 class ArmConfig(BaseModel):
@@ -42,11 +59,14 @@ class StepRecord(BaseModel):
     context: list[float] | None = None
     was_random: bool
     true_prob: float
+    optimal_idx: int | None = None
+    optimal_prob: float | None = None
+    all_true_probs: list[float] | None = None
 
 
 class LinMeta(BaseModel):
-    A: list[list[float]] = Field(default_factory=lambda: [[1, 0], [0, 1]])
-    b: list[float] = Field(default_factory=lambda: [0, 0])
+    A: list[list[float]] = Field(default_factory=lambda: [[1.0, 0.0], [0.0, 1.0]])
+    b: list[float] = Field(default_factory=lambda: [0.0, 0.0])
 
 
 class SimState(BaseModel):

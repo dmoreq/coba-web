@@ -88,18 +88,29 @@ class SimulationService:
         cum_regret = state.regret_history[-1] if state.regret_history else 0.0
         total_rewards = sum(a.successes for a in state.arm_states)
         avg_reward = total_rewards / t
-        best_arm_idx = max(range(len(state.arms)), key=lambda i: state.arms[i].true_prob)
+        contextual_truth = [step.all_true_probs for step in state.history if step.all_true_probs]
+        if contextual_truth:
+            n_arms = len(state.arms)
+            true_values = [
+                sum(step_probs[i] for step_probs in contextual_truth) / len(contextual_truth)
+                for i in range(n_arms)
+            ]
+        else:
+            true_values = [arm.true_prob for arm in state.arms]
+
+        best_arm_idx = max(range(len(state.arms)), key=lambda i: true_values[i])
         best_arm = state.arms[best_arm_idx]
         accuracy_table = []
         for i, arm in enumerate(state.arms):
             st = state.arm_states[i]
             mean = 0.0 if st.n == 0 else st.successes / st.n
+            true_value = true_values[i]
             accuracy_table.append(
                 {
                     "arm": arm.label,
                     "estimated": round(mean, 3),
-                    "true": arm.true_prob,
-                    "error": round(abs(mean - arm.true_prob), 3),
+                    "true": round(true_value, 3),
+                    "error": round(abs(mean - true_value), 3),
                     "pulls": st.n,
                 }
             )
