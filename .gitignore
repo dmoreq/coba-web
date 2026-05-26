@@ -32,3 +32,6 @@ dist/
 .pytest_cache/
 coverage/
 .nyc_output/
+
+# Vercel
+.vercel/

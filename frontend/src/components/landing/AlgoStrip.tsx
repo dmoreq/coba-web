@@ -1,21 +1,14 @@
 import { ALGO_META } from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
 
-const EXTRA_PILLS = [
-  { label: "LinTS", color: "#ae3ec9", light: "#f8f0fc", tag: "contextual" },
-  { label: "GP-UCB", color: "#e64980", light: "#fff0f6", tag: "contextual" },
-  { label: "NeuralLinear", color: "#f76707", light: "#fff4e6", tag: "contextual" },
-  { label: "CATS", color: "#2f9e44", light: "#ebfbee", tag: "continuous" },
-];
-const ALGO_PILLS = [
-  ...Object.entries(ALGO_META).map(([id, meta]) => ({
-    label: meta.label,
-    color: meta.color,
-    light: meta.light,
-    tag: id === "linucb" ? "contextual" : "context-free",
-  })),
-  ...EXTRA_PILLS,
-];
+const CONTEXT_FREE = new Set(["ucb1", "thompson", "epsilon_greedy"]);
+
+const ALGO_PILLS = Object.entries(ALGO_META).map(([id, meta]) => ({
+  label: meta.label,
+  color: meta.color,
+  light: meta.light,
+  tag: CONTEXT_FREE.has(id) ? "context-free" : "contextual",
+}));
 
 export function AlgoStrip() {
   return (
