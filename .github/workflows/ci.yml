@@ -12,8 +12,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.12"
-      - run: uv sync --dev
-      - run: uv run ruff check src/
+          enable-cache: true
+      - run: uv sync --frozen
+      - run: uvx ruff check src/
       - run: uv run pytest -v
 
   frontend:
@@ -28,7 +29,7 @@ jobs:
         with:
           node-version: "22"
           cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - run: npx @biomejs/biome check src/
       - run: pnpm vitest run
