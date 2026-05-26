@@ -10,6 +10,7 @@ from coba_server.config import Settings
 from coba_server.di import get_simulation_service
 from coba_server.routes.algorithms import router as algorithms_router
 from coba_server.routes.health import router as health_router
+from coba_server.routes.scenarios import router as scenarios_router
 from coba_server.routes.simulate import router as simulate_router
 
 settings = Settings()
@@ -49,6 +50,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api")
     app.include_router(simulate_router, prefix="/api")
     app.include_router(algorithms_router, prefix="/api")
+    app.include_router(scenarios_router, prefix="/api")
 
     return app
 
