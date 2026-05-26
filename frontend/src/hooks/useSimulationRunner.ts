@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
 /**
  * Custom hook that calls `step` at the given `speed` when `isRunning` is true.
- * Uses recursive setTimeout to wait for each async step to finish before scheduling the next.
+ * Uses recursive setTimeout with ref-based cancellation and timer clearing
+ * so the pause button stops the loop immediately.
  */
 export function useSimulationRunner(
   isRunning: boolean,
@@ -12,28 +13,35 @@ export function useSimulationRunner(
   const stepRef = useRef(step);
   stepRef.current = step;
 
-  const callback = useCallback(async () => {
-    await stepRef.current();
-  }, []);
+  const cancelledRef = useRef(false);
+  const steppingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (!isRunning) return;
-    let cancelled = false;
-    let stepping = false;
+
+    cancelledRef.current = false;
 
     const tick = async () => {
-      if (cancelled || stepping) return;
-      stepping = true;
-      await callback();
-      stepping = false;
-      if (!cancelled) {
-        setTimeout(tick, Math.round(1000 / speed));
+      if (cancelledRef.current || steppingRef.current) return;
+      steppingRef.current = true;
+      try {
+        await stepRef.current();
+      } finally {
+        steppingRef.current = false;
+      }
+      if (!cancelledRef.current) {
+        timerRef.current = setTimeout(tick, Math.round(1000 / speed));
       }
     };
-    tick();
+    timerRef.current = setTimeout(tick, 0);
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
-  }, [isRunning, speed, callback]);
+  }, [isRunning, speed]);
 }
