@@ -114,6 +114,35 @@ describe("api.step", () => {
     expect(r.t).toBe(1);
     expect(fetch).toHaveBeenCalledWith(`${BASE}/api/simulate/abc/step`, expect.any(Object));
   });
+
+  it("returns properly typed step record and state", async () => {
+    mockFetch(200, {
+      t: 2,
+      step: {
+        t: 2,
+        chosen_idx: 1,
+        outcome: 1,
+        step_regret: 0.1,
+        cum_regret: 0.1,
+        scores: [{ mean: 0.5, bonus: 0.1, score: 0.6, formula: "test" }],
+        context: null,
+        was_random: false,
+        true_prob: 0.8,
+      },
+      arm_states: [{ n: 1, successes: 1, failures: 0 }],
+      regret_history: [0, 0.1],
+    });
+    const r = await api.step("abc");
+    // Verify step record is properly typed
+    expect(r.step.t).toBe(2);
+    expect(r.step.chosenIdx).toBe(1);
+    expect(r.step.stepRegret).toBe(0.1);
+    // Verify armStates are properly typed
+    expect(r.armStates[0].n).toBe(1);
+    expect(r.armStates[0].successes).toBe(1);
+    // Verify regretHistory is array of numbers
+    expect(r.regretHistory).toEqual([0, 0.1]);
+  });
 });
 
 describe("api.run", () => {

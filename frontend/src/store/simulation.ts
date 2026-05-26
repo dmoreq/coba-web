@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import type { ApiStepResponse } from "@/lib/api";
 import type { AlgorithmId, Arm, SimState } from "@/lib/types";
 import { create } from "zustand";
 
@@ -83,7 +84,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     if (!simId || !simState) return;
     set({ isLoading: true, error: null });
     try {
-      const stepResponse = await api.step(simId);
+      const stepResponse: ApiStepResponse = await api.step(simId);
       // Reconstruct SimState from StepResponse without fetching full sim
       const newHistory = [...simState.history, stepResponse.step];
       const updatedSimState: SimState = {

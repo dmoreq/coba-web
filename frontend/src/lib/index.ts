@@ -24,6 +24,8 @@ export type {
   ApiSimulation,
   ApiSimState,
   SimStateResponse,
+  ApiStepResponse,
+  ApiRunResponse,
   ApiResultsResponse,
   ApiAlgoInfo,
 } from "./api";

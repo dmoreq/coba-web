@@ -9,7 +9,7 @@ import { SpeedSelector } from "@/components/shared/SpeedSelector";
 import { TruthToggle } from "@/components/shared/TruthToggle";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
 import { api } from "@/lib/api";
-import type { SimStateResponse } from "@/lib/api";
+import type { ApiRunResponse, SimStateResponse } from "@/lib/api";
 import { ALGO_META, createDefaultSimState } from "@/lib/constants";
 import type { AlgorithmId } from "@/lib/types";
 import { useCallback, useEffect, useState } from "react";

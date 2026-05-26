@@ -66,6 +66,23 @@ export interface ApiSimState {
 
 export type SimStateResponse = ApiSimState;
 
+/** Response from POST /simulate/{id}/step */
+export interface ApiStepResponse {
+  t: number;
+  step: ApiSimState["history"][number];
+  armStates: ApiSimState["armStates"];
+  regretHistory: number[];
+}
+
+/** Response from POST /simulate/{id}/run */
+export interface ApiRunResponse {
+  stepsRun: number;
+  finalT: number;
+  history: ApiSimState["history"];
+  regretHistory: number[];
+  armStates: ApiSimState["armStates"];
+}
+
 export interface ApiResultsResponse {
   totalSteps: number;
   cumulativeRegret: number;
@@ -169,23 +186,12 @@ export const api = {
     return request<ApiSimulation>("GET", `/api/simulate/${id}`);
   },
 
-  async step(
-    id: string,
-  ): Promise<{ t: number; step: unknown; armStates: unknown[]; regretHistory: number[] }> {
-    return request("POST", `/api/simulate/${id}/step`);
+  async step(id: string): Promise<ApiStepResponse> {
+    return request<ApiStepResponse>("POST", `/api/simulate/${id}/step`);
   },
 
-  async run(
-    id: string,
-    steps: number,
-  ): Promise<{
-    stepsRun: number;
-    finalT: number;
-    history: unknown[];
-    regretHistory: number[];
-    armStates: unknown[];
-  }> {
-    return request("POST", `/api/simulate/${id}/run`, { steps });
+  async run(id: string, steps: number): Promise<ApiRunResponse> {
+    return request<ApiRunResponse>("POST", `/api/simulate/${id}/run`, { steps });
   },
 
   async deleteSimulation(id: string): Promise<void> {
