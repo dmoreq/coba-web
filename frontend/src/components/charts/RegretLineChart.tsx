@@ -9,6 +9,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,6 +21,8 @@ interface RegretLineChartProps {
   width?: number;
   height?: number;
   color?: string;
+  driftStep?: number;
+  driftEndStep?: number;
 }
 
 function RegretLineChartComponent({
@@ -27,6 +30,8 @@ function RegretLineChartComponent({
   width = 280,
   height = 110,
   color = "#228be6",
+  driftStep,
+  driftEndStep,
 }: RegretLineChartProps) {
   if (regretHistory.length < 2) {
     return <EmptyChart width={width} height={height} message="Run some steps to see regret" />;
@@ -43,6 +48,9 @@ function RegretLineChartComponent({
         <CartesianGrid {...CHART_THEME.grid} />
         <XAxis
           dataKey="t"
+          type="number"
+          domain={[1, data.length]}
+          allowDataOverflow
           {...CHART_THEME.axis}
           label={{
             value: `t=${data.length}`,
@@ -83,6 +91,34 @@ function RegretLineChartComponent({
           dot={false}
           activeDot={{ r: 3, fill: color }}
         />
+        {driftStep != null && (
+          <ReferenceLine
+            x={driftStep}
+            stroke="#e8590c"
+            strokeDasharray="4 4"
+            strokeWidth={1.5}
+            label={{
+              value: "Drift begins",
+              position: "insideTopLeft",
+              fontSize: 9,
+              fill: "#e8590c",
+            }}
+          />
+        )}
+        {driftEndStep != null && (
+          <ReferenceLine
+            x={driftEndStep}
+            stroke="#e8590c"
+            strokeDasharray="4 4"
+            strokeWidth={1.5}
+            label={{
+              value: "Drift complete",
+              position: "insideTopRight",
+              fontSize: 9,
+              fill: "#e8590c",
+            }}
+          />
+        )}
       </LineChart>
     </ResponsiveContainer>
   );
