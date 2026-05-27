@@ -9,6 +9,7 @@ from typing import Any
 
 import numpy as np
 from coba import ClusterBandit, PolicyType
+from scipy.stats import truncnorm
 
 from coba_server.models.algorithms import ALGORITHM_META
 from coba_server.models.context import ContextScenario
@@ -69,6 +70,19 @@ CLUSTER_BANDIT_KWARGS = {
 def _sig(x: float) -> float:
     """Sigmoid function for reward probability."""
     return float(1 / (1 + np.exp(-x)))
+
+
+def _truncated_normal(
+    rng: np.random.Generator,
+    mean: float,
+    std: float,
+    low: float,
+    high: float,
+) -> float:
+    if std <= 0:
+        return float(np.clip(mean, low, high))
+    a, b = (low - mean) / std, (high - mean) / std
+    return float(truncnorm.rvs(a, b, loc=mean, scale=std, random_state=rng))
 
 
 def _cap_score(raw: float) -> float:
@@ -242,8 +256,10 @@ class CobaLibraryAdapter(CobaAdapter):
             # Sample from the segment's distribution
             context = np.array(
                 [
-                    np.clip(
-                        rng.normal(segment.context_mean[i], segment.context_std[i]),
+                    _truncated_normal(
+                        rng,
+                        segment.context_mean[i],
+                        segment.context_std[i],
                         scenario.features[i].min_val,
                         scenario.features[i].max_val,
                     )

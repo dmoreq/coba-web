@@ -296,3 +296,30 @@ class TestPersistentRng:
         ctx2 = [adapter.step(h2).context for _ in range(steps)]
 
         assert ctx1 != ctx2
+
+
+class TestTruncatedNormalSampling:
+    def test_no_exact_pileup_at_plus_one(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 0, "notification_channels")
+        samples = []
+        for _ in range(1000):
+            adapter.step(h)
+            ctx = adapter.get_state(h).history[-1].context
+            samples.append(ctx[0])
+        assert sum(1 for v in samples if v == 1.0) == 0
+
+    def test_no_exact_pileup_at_minus_one(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 1, "notification_channels")
+        samples = []
+        for _ in range(1000):
+            adapter.step(h)
+            ctx = adapter.get_state(h).history[-1].context
+            samples.append(ctx[0])
+        assert sum(1 for v in samples if v == -1.0) == 0
+
+    def test_values_remain_in_bounds(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 2, "notification_channels")
+        for _ in range(200):
+            adapter.step(h)
+            ctx = adapter.get_state(h).history[-1].context
+            assert all(-1.0 <= v <= 1.0 for v in ctx)
