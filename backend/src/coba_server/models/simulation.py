@@ -70,6 +70,11 @@ class LinMeta(BaseModel):
     b: list[float] = Field(default_factory=lambda: [0.0, 0.0])
 
 
+class PopulationSegmentSummary(BaseModel):
+    name: str
+    weight: float = Field(gt=0)
+
+
 class SimState(BaseModel):
     t: int = 0
     arms: list[ArmConfig]
@@ -88,6 +93,7 @@ class SimState(BaseModel):
     feature_low_labels: list[str] = Field(default_factory=list)
     feature_high_labels: list[str] = Field(default_factory=list)
     history_window: int = 150
+    population_segments: list[PopulationSegmentSummary] = Field(default_factory=list)
     history: list[StepRecord] = Field(default_factory=list)
     regret_history: list[float] = Field(default_factory=list)
 

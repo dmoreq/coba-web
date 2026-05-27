@@ -345,6 +345,15 @@ class TestSimStateFeatureMetadata:
         assert state.feature_maxs == [1.0, 1.0]
         assert len(state.feature_units) == 2
 
+    def test_get_state_includes_population_segments(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "notification_channels")
+        state = adapter.get_state(h)
+        assert len(state.population_segments) == 4
+        names = {s.name for s in state.population_segments}
+        assert "Mobile Active" in names
+        total = sum(s.weight for s in state.population_segments)
+        assert abs(total - 1.0) < 0.01
+
     def test_get_state_includes_history_window(self, adapter):
         from coba_server.services.coba_adapter_real import MAX_HISTORY_LENGTH
 

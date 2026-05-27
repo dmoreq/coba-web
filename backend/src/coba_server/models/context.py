@@ -69,6 +69,13 @@ class PopulationSegment(BaseModel):
     context_std: list[float] = Field(
         ..., description="Per-feature standard deviation in normalised space"
     )
+    context_correlations: list[float] | None = Field(
+        default=None,
+        description=(
+            "Upper-triangle Pearson correlations between features, row-major. "
+            "Length n*(n-1)/2. None means independent per-feature sampling."
+        ),
+    )
 
     def validate_feature_count(self, expected_count: int) -> None:
         """Ensure means and stds match feature count."""
@@ -82,6 +89,14 @@ class PopulationSegment(BaseModel):
                 f"PopulationSegment.context_std has {len(self.context_std)} values "
                 f"but scenario defines {expected_count} features"
             )
+        if self.context_correlations is not None:
+            expected_pairs = expected_count * (expected_count - 1) // 2
+            if len(self.context_correlations) != expected_pairs:
+                raise ValueError(
+                    f"PopulationSegment.context_correlations has "
+                    f"{len(self.context_correlations)} values but expected "
+                    f"{expected_pairs} for {expected_count} features"
+                )
 
 
 class DriftConfig(BaseModel):

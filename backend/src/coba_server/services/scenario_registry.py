@@ -114,6 +114,7 @@ NOTIFICATION_CHANNELS = ContextScenario(
             weight=0.35,
             context_mean=[0.8, -0.6],
             context_std=[0.15, 0.2],
+            context_correlations=[-0.7],
         ),
         PopulationSegment(
             name="Cross-Device Recent",

@@ -9,7 +9,6 @@ from typing import Any
 
 import numpy as np
 from coba import ClusterBandit, PolicyType
-from scipy.stats import truncnorm
 
 from coba_server.models.algorithms import ALGORITHM_META
 from coba_server.models.context import ContextScenario
@@ -18,12 +17,14 @@ from coba_server.models.simulation import (
     ArmConfig,
     ArmState,
     LinMeta,
+    PopulationSegmentSummary,
     Score,
     SimState,
     StepRecord,
 )
 from coba_server.services.base import CobaAdapter
 from coba_server.services.scenario_registry import get_scenario
+from coba_server.utils.context_sampling import sample_segment_context, truncated_normal
 
 MAX_ACTIVE_SIMULATIONS = 100
 MAX_HISTORY_LENGTH = 150
@@ -97,10 +98,7 @@ def _truncated_normal(
     low: float,
     high: float,
 ) -> float:
-    if std <= 0:
-        return float(np.clip(mean, low, high))
-    a, b = (low - mean) / std, (high - mean) / std
-    return float(truncnorm.rvs(a, b, loc=mean, scale=std, random_state=rng))
+    return truncated_normal(rng, mean, std, low, high)
 
 
 def _cap_score(raw: float) -> float:
@@ -237,6 +235,7 @@ class CobaLibraryAdapter(CobaAdapter):
             feature_low_labels=[f.low_label for f in scenario.features],
             feature_high_labels=[f.high_label for f in scenario.features],
             history_window=MAX_HISTORY_LENGTH,
+            population_segments=self._population_segment_summaries(scenario),
             t=self._ts[handle],
             history=list(self._histories[handle]),
             regret_history=list(self._regret_histories[handle]),
@@ -265,6 +264,18 @@ class CobaLibraryAdapter(CobaAdapter):
             )
         return scores
 
+    @staticmethod
+    def _population_segment_summaries(
+        scenario: ContextScenario,
+    ) -> list[PopulationSegmentSummary]:
+        if not scenario.population_segments:
+            return []
+        total = sum(s.weight for s in scenario.population_segments)
+        return [
+            PopulationSegmentSummary(name=s.name, weight=s.weight / total)
+            for s in scenario.population_segments
+        ]
+
     def _sample_context(
         self, handle: int, rng: np.random.Generator
     ) -> tuple[np.ndarray, str | None]:
@@ -286,19 +297,7 @@ class CobaLibraryAdapter(CobaAdapter):
             segment = scenario.population_segments[segment_idx]
             segment_name = segment.name
 
-            # Sample from the segment's distribution
-            context = np.array(
-                [
-                    _truncated_normal(
-                        rng,
-                        segment.context_mean[i],
-                        segment.context_std[i],
-                        scenario.features[i].min_val,
-                        scenario.features[i].max_val,
-                    )
-                    for i in range(n_features)
-                ]
-            )
+            context = sample_segment_context(segment, scenario.features, rng)
         else:
             # Uniform over feature ranges
             context = np.array(
