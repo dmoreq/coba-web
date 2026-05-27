@@ -14,8 +14,8 @@ jobs:
         run: uv sync --frozen --extra dev --directory backend
       - name: Lint
         run: uv run --directory backend ruff check src/
-      - name: Test
-        run: uv run --directory backend pytest -v
+      - name: Test with coverage
+        run: uv run --directory backend pytest tests/ --cov=coba_server --cov-report=term-missing --cov-fail-under=95 -q
 
   frontend:
     runs-on: ubuntu-latest
