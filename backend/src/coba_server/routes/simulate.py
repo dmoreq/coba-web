@@ -30,6 +30,17 @@ async def create_simulation(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/purge", status_code=204)
+async def purge_simulations(
+    service: SimulationService = Depends(get_simulation_service),
+) -> None:
+    from coba_server import settings
+
+    if not settings.allow_simulation_purge:
+        raise HTTPException(status_code=403, detail="Simulation purge is disabled")
+    await asyncio.to_thread(service.delete_all)
+
+
 @router.get("/{sim_id}")
 async def get_simulation(
     sim_id: UUID,

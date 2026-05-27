@@ -194,3 +194,17 @@ class TestCors:
             assert methods != "*", "CORS allow-methods should not be * for security"
             for unsafe in ["PUT", "PATCH"]:
                 assert unsafe not in methods
+
+
+class TestPurgeSimulations:
+    def test_purge_disabled_by_default(self, client):
+        assert client.post("/api/simulate/purge").status_code == 403
+
+    def test_purge_removes_active_simulations(self, client, monkeypatch):
+        from coba_server import settings
+
+        monkeypatch.setattr(settings, "allow_simulation_purge", True)
+        sid = client.post("/api/simulate", json={"arms": _arms()}).json()["id"]
+        assert client.get(f"/api/simulate/{sid}").status_code == 200
+        assert client.post("/api/simulate/purge").status_code == 204
+        assert client.get(f"/api/simulate/{sid}").status_code == 404

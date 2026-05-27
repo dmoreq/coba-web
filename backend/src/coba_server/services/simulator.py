@@ -81,6 +81,13 @@ class SimulationService:
         self._simulations.pop(sim_id, None)
         self._created_at.pop(sim_id, None)
 
+    def delete_all(self) -> int:
+        """Remove every active simulation. Returns count deleted."""
+        sim_ids = list(self._simulations.keys())
+        for sim_id in sim_ids:
+            self.delete(sim_id)
+        return len(sim_ids)
+
     def get_coba_state(self, sim_id: UUID) -> dict:
         if sim_id not in self._simulations:
             raise ValueError("Simulation not found")
