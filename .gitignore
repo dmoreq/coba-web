@@ -31,7 +31,21 @@ dist/
 *.tsbuildinfo
 .pytest_cache/
 coverage/
+.coverage
+htmlcov/
 .nyc_output/
+
+# Graphify generated knowledge graph
+graphify-out/
+frontend/graphify-out/
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+
+# Local package caches & agent tooling
+.pnpm-store/
+.antigravitycli/
 
 # Vercel
 .vercel/
