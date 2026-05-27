@@ -1,5 +1,11 @@
 import { test, expect } from "@playwright/test";
-import { gotoPlayground, selectScenario, stepTimes, selectAlgorithm } from "./helpers/playground";
+import {
+  gotoPlayground,
+  selectScenario,
+  stepTimes,
+  selectAlgorithm,
+  waitPlaygroundReady,
+} from "./helpers/playground";
 
 test.describe("Playground controls", () => {
   test.beforeEach(async ({ page }) => {
@@ -67,9 +73,13 @@ test.describe("Drift scenario chart", () => {
     await selectScenario(page, "Content Format");
     await selectAlgorithm(page, "SW-LinUCB");
     for (let i = 1; i <= 205; i++) {
+      await waitPlaygroundReady(page);
       await page.getByText("Step →").click();
-      await page.getByText(new RegExp(`t=${i}`)).waitFor({ timeout: 20_000 });
+      await page
+        .getByTestId("playground-step-counter")
+        .filter({ hasText: `t=${i}` })
+        .waitFor({ timeout: 20_000 });
     }
-    await expect(page.getByText("Drift begins")).toBeVisible();
+    await expect(page.getByTestId("chart-regret").getByText("Drift begins")).toBeVisible();
   });
 });

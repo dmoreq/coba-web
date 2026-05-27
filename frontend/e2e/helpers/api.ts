@@ -49,3 +49,13 @@ export async function apiRun(request: APIRequestContext, simId: string, steps: n
 export async function apiDelete(request: APIRequestContext, simId: string) {
   await request.delete(`${API}/api/simulate/${simId}`);
 }
+
+export async function apiPurgeSimulations(request: APIRequestContext) {
+  const r = await request.post(`${API}/api/simulate/purge`);
+  if (r.status() === 403) {
+    throw new Error("purge disabled — set COBA_ALLOW_SIMULATION_PURGE=1 on backend");
+  }
+  if (!r.ok() && r.status() !== 204) {
+    throw new Error(`purge ${r.status()} ${await r.text()}`);
+  }
+}

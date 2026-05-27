@@ -62,7 +62,10 @@ export function ControlBar({
       <PlaybackControls isRunning={isRunning} onStep={onStep} onPlayPause={onPlayPause} />
       <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={onSpeedChange} />
       <div className="flex items-center gap-sm">
-        <span className="text-[12px] text-gray-6 font-mono bg-gray-0 px-sm py-[3px] rounded-xs">
+        <span
+          className="text-[12px] text-gray-6 font-mono bg-gray-0 px-sm py-[3px] rounded-xs"
+          data-testid="playground-step-counter"
+        >
           t={simState.t}
         </span>
         <button

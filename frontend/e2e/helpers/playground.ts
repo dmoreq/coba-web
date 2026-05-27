@@ -2,8 +2,10 @@ import type { Page } from "@playwright/test";
 
 export async function gotoPlayground(page: Page) {
   await page.goto("/playground");
-  await page.getByText("Step →").waitFor({ state: "visible", timeout: 15_000 });
-  await page.getByText("Running simulation...").waitFor({ state: "hidden", timeout: 15_000 }).catch(() => {});
+  await waitPlaygroundReady(page);
+  await page.getByTestId("playground-step-counter").filter({ hasText: "t=0" }).waitFor({
+    timeout: 30_000,
+  });
 }
 
 export async function gotoResults(page: Page) {
@@ -15,31 +17,40 @@ function algoSelector(page: Page) {
   return page.locator("span").filter({ hasText: /^Algo$/ }).locator("xpath=..");
 }
 
-function simStepResponse(page: Page) {
+function simCreateResponse(page: Page) {
   return page.waitForResponse(
     (r) =>
-      r.url().includes("/api/simulate/") &&
-      r.url().includes("/step") &&
+      r.url().includes("/api/simulate") &&
       r.request().method() === "POST" &&
+      !r.url().includes("/step") &&
       r.ok(),
   );
 }
 
+/** Wait until playground is not mid-request (create, step, reset, scenario switch). */
+export async function waitPlaygroundReady(page: Page) {
+  await page.getByText("Step →").waitFor({ state: "visible", timeout: 15_000 });
+  await page.getByText("Running simulation...").waitFor({ state: "hidden", timeout: 45_000 }).catch(() => {});
+}
+
 export async function stepTimes(page: Page, n: number) {
   for (let i = 0; i < n; i++) {
-    const step = simStepResponse(page);
+    const expectedT = i + 1;
+    await waitPlaygroundReady(page);
     await page.getByText("Step →").click();
-    await step;
     await page
-      .getByText(new RegExp(`t=${i + 1}`))
-      .first()
-      .waitFor({ timeout: 30_000 });
+      .getByTestId("playground-step-counter")
+      .filter({ hasText: `t=${expectedT}` })
+      .waitFor({ timeout: 60_000 });
   }
 }
 
 export async function selectAlgorithm(page: Page, name: string) {
   await algoSelector(page).getByRole("button", { name, exact: true }).click();
-  await page.getByText(/t=0/).first().waitFor({ timeout: 15_000 });
+  await page.getByTestId("playground-step-counter").filter({ hasText: "t=0" }).waitFor({
+    timeout: 30_000,
+  });
+  await waitPlaygroundReady(page);
 }
 
 export async function openScenarioPicker(page: Page) {
@@ -50,8 +61,14 @@ export async function openScenarioPicker(page: Page) {
 export async function selectScenario(page: Page, label: string) {
   await openScenarioPicker(page);
   const dropdown = page.getByTestId("scenario-picker-menu");
-  await dropdown.getByRole("button").filter({ hasText: label }).click();
-  await page.getByText(/t=0/).first().waitFor({ timeout: 15_000 });
+  await Promise.all([
+    simCreateResponse(page),
+    dropdown.getByRole("button").filter({ hasText: label }).click(),
+  ]);
+  await page.getByTestId("playground-step-counter").filter({ hasText: "t=0" }).waitFor({
+    timeout: 15_000,
+  });
+  await waitPlaygroundReady(page);
 }
 
 export function headerNav(page: Page, label: string) {
