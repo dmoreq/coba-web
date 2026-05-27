@@ -25,6 +25,12 @@ export default defineConfig({
         "**/index.ts",
       ],
       reporter: ["text", "json-summary"],
+      thresholds: {
+        lines: 70,
+        branches: 65,
+        functions: 70,
+        statements: 70,
+      },
     },
   },
 });
