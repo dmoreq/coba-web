@@ -7,7 +7,12 @@ import pytest
 
 from coba_server.models.context import ContextFeature, ContextScenario, RewardProfile
 from coba_server.models.simulation import ArmConfig
-from coba_server.services.coba_adapter_real import CobaLibraryAdapter, _compute_logit, _sig
+from coba_server.services.coba_adapter_real import (
+    CobaLibraryAdapter,
+    _coerce_hyperparam,
+    _compute_logit,
+    _sig,
+)
 from coba_server.services.scenario_registry import get_scenario
 from coba_server.utils.cyclic_time import encode_cyclic_time
 
@@ -499,3 +504,9 @@ class TestCyclicTimeEncoding:
         t_midnight = encode_cyclic_time(0.0)
         dist = np.sqrt(sum((a - b) ** 2 for a, b in zip(t_noon, t_midnight, strict=True)))
         assert dist > 1.5
+
+
+class TestCoerceHyperparam:
+    def test_scale_contexts_coerced_to_bool(self):
+        assert _coerce_hyperparam("scale_contexts", 1.0) is True
+        assert _coerce_hyperparam("scale_contexts", 0.0) is False
