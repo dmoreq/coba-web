@@ -72,6 +72,24 @@ def _sig(x: float) -> float:
     return float(1 / (1 + np.exp(-x)))
 
 
+def _compute_logit(
+    weights: list[float],
+    bias: float,
+    context: np.ndarray,
+    interaction_weights: list[float] | None = None,
+) -> float:
+    """Linear logit plus optional upper-triangle interaction terms."""
+    logit = float(np.dot(weights, context)) + bias
+    if interaction_weights:
+        n = len(context)
+        k = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                logit += interaction_weights[k] * float(context[i] * context[j])
+                k += 1
+    return logit
+
+
 def _truncated_normal(
     rng: np.random.Generator,
     mean: float,
@@ -292,10 +310,11 @@ class CobaLibraryAdapter(CobaAdapter):
 
         return context, segment_name
 
-    def _get_reward_weights(self, handle: int, arm_idx: int, t: int) -> tuple[list[float], float]:
+    def _get_reward_params(
+        self, handle: int, arm_idx: int, t: int
+    ) -> tuple[list[float], float, list[float] | None]:
         """
-        Get the reward weights (and bias) for an arm, accounting for drift.
-        Returns (weights, bias).
+        Get reward weights, bias, and interaction weights for an arm, accounting for drift.
         """
         scenario = self._scenarios[handle]
         if arm_idx >= len(scenario.reward_profiles):
@@ -303,33 +322,45 @@ class CobaLibraryAdapter(CobaAdapter):
         profile = scenario.reward_profiles[arm_idx]
 
         if not scenario.drift_config:
-            # No drift: return profile as-is
-            return profile.weights, profile.bias
+            return profile.weights, profile.bias, profile.interaction_weights
 
-        # Drift logic: interpolate between initial and target profiles
         drift = scenario.drift_config
         if t < drift.drift_step:
-            # Before drift: use initial profiles
-            return profile.weights, profile.bias
-        elif t >= drift.drift_step + drift.drift_duration:
-            # After drift complete: use target profiles
+            return profile.weights, profile.bias, profile.interaction_weights
+        if t >= drift.drift_step + drift.drift_duration:
             target_profile = drift.target_profiles[arm_idx]
-            return target_profile.weights, target_profile.bias
+            return (
+                target_profile.weights,
+                target_profile.bias,
+                target_profile.interaction_weights,
+            )
+
+        progress = (t - drift.drift_step) / drift.drift_duration
+        target_profile = drift.target_profiles[arm_idx]
+        interpolated_weights = [
+            profile.weights[i] * (1 - progress) + target_profile.weights[i] * progress
+            for i in range(len(profile.weights))
+        ]
+        interpolated_bias = profile.bias * (1 - progress) + target_profile.bias * progress
+        initial_inter = profile.interaction_weights
+        target_inter = target_profile.interaction_weights
+        interpolated_inter: list[float] | None
+        if initial_inter is None and target_inter is None:
+            interpolated_inter = None
+        elif initial_inter is None:
+            assert target_inter is not None
+            interpolated_inter = [w * progress for w in target_inter]
+        elif target_inter is None:
+            interpolated_inter = [w * (1 - progress) for w in initial_inter]
         else:
-            # During drift: linearly interpolate
-            progress = (t - drift.drift_step) / drift.drift_duration
-            initial_weights = profile.weights
-            target_weights = drift.target_profiles[arm_idx].weights
-            initial_bias = profile.bias
-            target_bias = drift.target_profiles[arm_idx].bias
-
-            interpolated_weights = [
-                initial_weights[i] * (1 - progress) + target_weights[i] * progress
-                for i in range(len(initial_weights))
+            init_inter = initial_inter
+            targ_inter = target_inter
+            assert init_inter is not None and targ_inter is not None
+            interpolated_inter = [
+                init_inter[i] * (1 - progress) + targ_inter[i] * progress
+                for i in range(len(init_inter))
             ]
-            interpolated_bias = initial_bias * (1 - progress) + target_bias * progress
-
-            return interpolated_weights, interpolated_bias
+        return interpolated_weights, interpolated_bias, interpolated_inter
 
     def _true_probabilities(
         self, handle: int, context: np.ndarray, t: int
@@ -347,8 +378,8 @@ class CobaLibraryAdapter(CobaAdapter):
             probs = []
             for i, arm in enumerate(arm_configs):
                 if i < len(self._scenarios[handle].reward_profiles):
-                    weights, bias = self._get_reward_weights(handle, i, t)
-                    logit = float(np.dot(weights, context) + bias)
+                    weights, bias, interaction_weights = self._get_reward_params(handle, i, t)
+                    logit = _compute_logit(weights, bias, context, interaction_weights)
                     prob = _sig(logit)
                 else:
                     # Custom arm lists can exceed the scenario template's reward

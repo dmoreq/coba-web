@@ -24,7 +24,7 @@ class ContextFeature(BaseModel):
 
 
 class RewardProfile(BaseModel):
-    """Per-arm reward function: σ(weights · context + bias)."""
+    """Per-arm reward function: σ(weights · context + bias + interaction terms)."""
 
     weights: list[float] = Field(
         ..., description="One weight per context feature (linear coefficient)"
@@ -32,6 +32,14 @@ class RewardProfile(BaseModel):
     bias: float = Field(default=0.0, description="Intercept term (additive bias)")
     description: str = Field(
         default="", description="Human explanation of this arm's reward surface"
+    )
+    interaction_weights: list[float] | None = Field(
+        default=None,
+        description=(
+            "Upper-triangle feature-pair interaction coefficients, row-major: "
+            "for features (f0, f1, f2) order is (f0,f1), (f0,f2), (f1,f2). "
+            "Length must be n_features * (n_features - 1) / 2."
+        ),
     )
 
     def validate_feature_count(self, expected_count: int) -> None:
@@ -41,6 +49,13 @@ class RewardProfile(BaseModel):
                 f"RewardProfile has {len(self.weights)} weights but "
                 f"scenario defines {expected_count} features"
             )
+        if self.interaction_weights is not None:
+            expected_pairs = expected_count * (expected_count - 1) // 2
+            if len(self.interaction_weights) != expected_pairs:
+                raise ValueError(
+                    f"RewardProfile has {len(self.interaction_weights)} interaction weights "
+                    f"but expected {expected_pairs} for {expected_count} features"
+                )
 
 
 class PopulationSegment(BaseModel):

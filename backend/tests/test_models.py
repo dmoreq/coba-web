@@ -70,6 +70,17 @@ class TestContextScenarioFeatureCap:
             )
 
 
+class TestRewardProfile:
+    def test_interaction_weights_default_none(self):
+        profile = RewardProfile(weights=[0.5, 0.3], bias=0.1)
+        assert profile.interaction_weights is None
+
+    def test_rejects_wrong_interaction_count(self):
+        profile = RewardProfile(weights=[0.5, 0.3], bias=0.0, interaction_weights=[1.0, 0.5])
+        with pytest.raises(ValueError, match="interaction weights"):
+            profile.validate_feature_count(2)
+
+
 class TestArmConfig:
     def test_valid(self):
         a = ArmConfig(id="e", label="E", true_prob=0.2)

@@ -2,11 +2,14 @@
 
 from unittest.mock import patch
 
+import numpy as np
 import pytest
 
 from coba_server.models.context import ContextFeature, ContextScenario, RewardProfile
 from coba_server.models.simulation import ArmConfig
-from coba_server.services.coba_adapter_real import CobaLibraryAdapter
+from coba_server.services.coba_adapter_real import CobaLibraryAdapter, _compute_logit, _sig
+from coba_server.services.scenario_registry import get_scenario
+from coba_server.utils.cyclic_time import encode_cyclic_time
 
 TWO_ARMS = [
     ArmConfig(id="a", label="A", true_prob=0.5),
@@ -410,3 +413,80 @@ class TestLinMetaNFeatures:
         state = adapter.get_state(h)
         assert state.feature_low_labels == ["desktop-only", "today"]
         assert state.feature_high_labels == ["mobile-only", "30+ days ago"]
+
+
+class TestComputeLogit:
+    def test_interaction_weight_scales_with_both_features_high(self):
+        logit = _compute_logit([0, 0], 0, np.array([0.9, 0.8]), [1.0])
+        assert abs(logit - 0.72) < 1e-6
+
+    def test_zero_interaction_is_identical_to_linear(self):
+        ctx = np.array([0.5, 0.5])
+        logit_w = _compute_logit([0.5, 0.3], 0.1, ctx, [0.0])
+        logit_wo = _compute_logit([0.5, 0.3], 0.1, ctx, None)
+        assert abs(logit_w - logit_wo) < 1e-9
+
+
+class TestNewsFeedRewardSurfaces:
+    def _ctx(self, engagement: float, hour: float) -> np.ndarray:
+        sin_t, cos_t = encode_cyclic_time(hour)
+        return np.array([engagement, sin_t, cos_t])
+
+    def test_sports_reward_requires_both_features_high(self):
+        scenario = get_scenario("news_feed")
+        sports = scenario.reward_profiles[0]
+
+        engaged_morning = self._ctx(1.0, 8.0)
+        engaged_evening = self._ctx(1.0, 20.0)
+        lazy_morning = self._ctx(-1.0, 8.0)
+
+        def prob(ctx: np.ndarray) -> float:
+            logit = _compute_logit(
+                sports.weights,
+                sports.bias,
+                ctx,
+                sports.interaction_weights,
+            )
+            return _sig(logit)
+
+        p_em = prob(engaged_morning)
+        p_ee = prob(engaged_evening)
+        p_lm = prob(lazy_morning)
+        assert p_em > p_ee + 0.1
+        assert p_em > p_lm + 0.1
+
+
+class TestFlashSaleBimodal:
+    def test_flash_sale_bimodal_both_corners_beat_center(self):
+        scenario = get_scenario("product_recommendations")
+        profile = scenario.reward_profiles[3]
+
+        bargain_hunter = np.array([1.0, -1.0])
+        big_spender = np.array([-1.0, 1.0])
+        middle_ground = np.array([0.0, 0.0])
+
+        def prob(ctx: np.ndarray) -> float:
+            logit = _compute_logit(
+                profile.weights,
+                profile.bias,
+                ctx,
+                profile.interaction_weights,
+            )
+            return _sig(logit)
+
+        assert prob(bargain_hunter) > prob(middle_ground) + 0.15
+        assert prob(big_spender) > prob(middle_ground) + 0.15
+
+
+class TestCyclicTimeEncoding:
+    def test_cyclic_encoding_midnight_adjacent_to_1130pm(self):
+        t_2330 = encode_cyclic_time(23.5)
+        t_0030 = encode_cyclic_time(0.5)
+        dist = np.sqrt(sum((a - b) ** 2 for a, b in zip(t_2330, t_0030, strict=True)))
+        assert dist < 0.5
+
+    def test_cyclic_encoding_midnight_far_from_noon(self):
+        t_noon = encode_cyclic_time(12.0)
+        t_midnight = encode_cyclic_time(0.0)
+        dist = np.sqrt(sum((a - b) ** 2 for a, b in zip(t_noon, t_midnight, strict=True)))
+        assert dist > 1.5
