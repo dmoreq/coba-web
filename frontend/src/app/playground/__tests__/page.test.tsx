@@ -1,6 +1,6 @@
 import PlaygroundPage from "@/app/playground/page";
 import { useSimulationStore } from "@/store/simulation";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/store/simulation", () => ({
@@ -9,7 +9,16 @@ vi.mock("@/store/simulation", () => ({
 
 vi.mock("@/lib/api", () => ({
   api: {
-    getScenarios: vi.fn().mockResolvedValue([]),
+    getScenarios: vi.fn().mockResolvedValue([
+      {
+        id: "notification_channels",
+        label: "Channels",
+        description: "",
+        domain: "x",
+        armCount: 3,
+        featureCount: 1,
+      },
+    ]),
     createSimulation: vi.fn(),
     stepSimulation: vi.fn(),
     deleteSimulation: vi.fn(),
@@ -51,12 +60,14 @@ describe("PlaygroundPage", () => {
     );
   });
 
-  it("renders page shell without crashing when simState is null", () => {
+  it("renders page shell without crashing when simState is null", async () => {
     render(<PlaygroundPage />);
-    expect(screen.getByText(/Algo/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Algo/i)).toBeInTheDocument();
+    });
   });
 
-  it("shows error banner when store has error", () => {
+  it("shows error banner when store has error", async () => {
     vi.mocked(useSimulationStore).mockImplementation((selector) =>
       selector({
         simState: null,
@@ -80,6 +91,8 @@ describe("PlaygroundPage", () => {
       } as never),
     );
     render(<PlaygroundPage />);
-    expect(screen.getByText("Simulation failed")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Simulation failed")).toBeInTheDocument();
+    });
   });
 });
