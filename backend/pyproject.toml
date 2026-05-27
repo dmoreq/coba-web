@@ -38,6 +38,9 @@ ignore = ["PLR2004"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+  "performance: latency guard tests with generous local/CI thresholds",
+]
 
 [tool.uv.sources]
 coba = { git = "https://github.com/dmoreq/coba.git" }

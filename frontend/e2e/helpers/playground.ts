@@ -30,7 +30,10 @@ function simCreateResponse(page: Page) {
 /** Wait until playground is not mid-request (create, step, reset, scenario switch). */
 export async function waitPlaygroundReady(page: Page) {
   await page.getByText("Step →").waitFor({ state: "visible", timeout: 15_000 });
-  await page.getByText("Running simulation...").waitFor({ state: "hidden", timeout: 45_000 }).catch(() => {});
+  await page
+    .getByTestId("playground-recreating-banner")
+    .waitFor({ state: "hidden", timeout: 45_000 })
+    .catch(() => {});
 }
 
 export async function stepTimes(page: Page, n: number) {

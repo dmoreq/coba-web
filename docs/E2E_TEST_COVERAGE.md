@@ -34,7 +34,8 @@ Current E2E inventory:
 | Mobile smoke | 1 | 4 |
 | Accessibility | 1 | 3 |
 | Visual regression | 1 | 9 |
-| **Total** | **15** | **86 discovered (85 default)** |
+| Performance smoke | 1 | 5 |
+| **Total** | **16** | **91 discovered (90 default)** |
 
 Overall assessment: E2E coverage is strong for happy paths, API contracts, mobile smoke, failure UX, keyboard basics, and visual layouts. Remaining gaps: scheduled drift in default PR (weekly job added), deeper numeric correctness, and broader a11y auditing.
 
@@ -242,6 +243,22 @@ Missing API/E2E contract cases:
 - delete idempotency or deleted-simulation follow-up behavior
 
 Those are not all mandatory E2E cases. Many belong in backend unit/integration tests. Add E2E cases only where the frontend needs to prove visible behavior.
+
+## Performance smoke (`e2e/performance.spec.ts`)
+
+Command: `pnpm test:e2e:perf` (requires backend + frontend via Playwright `webServer`).
+
+| Test | SLA (default) | Env override |
+|------|---------------|--------------|
+| API UCB1 step | &lt; 800 ms | `STEP_API_BUDGET_MS` |
+| Nav → Glossary (heading visible) | &lt; 1200 ms dev | `NAV_BUDGET_MS` |
+| Step button `aria-busy` during delayed step | &lt; 100 ms to busy | route delay 300 ms |
+| Playground manual step UI | &lt; 2000 ms | — |
+| Mobile viewport step busy | &lt; 100 ms to busy | — |
+
+Backend latency guard: `backend/tests/test_step_performance.py` (`STEP_P95_BUDGET_MS`, default 800).
+
+Human baseline: `docs/PERF_BASELINE.md` + `pnpm perf:baseline`.
 
 ## Visual Regression Coverage
 
