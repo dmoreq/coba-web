@@ -75,7 +75,10 @@ function ScenarioPickerComponent({
                           <span className="ml-[6px] text-[9px] text-blue-6 font-bold">✓</span>
                         )}
                       </div>
-                      <div className="text-[10px] text-gray-5 mt-[2px]">
+                      <div className="text-[10px] text-gray-5 mt-[2px] line-clamp-1">
+                        {scenario.description}
+                      </div>
+                      <div className="text-[10px] text-gray-4 mt-[2px]">
                         {scenario.domain} · {scenario.armCount} arms · {scenario.featureCount}{" "}
                         features
                         {scenario.hasDrift && " · drift"}
