@@ -1,5 +1,6 @@
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { EnvPanel } from "@/components/playground/EnvPanel";
+import { WhyPanel } from "@/components/playground/WhyPanel";
 import type { SimState } from "@/lib/types";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
@@ -79,5 +80,19 @@ describe("UCBDisplay", () => {
     render(<UCBDisplay simState={makeState("bootstrapped_ts")} showGroundTruth={false} />);
     expect(screen.getByText("Policy score")).toBeTruthy();
     expect(screen.queryByText("Mean estimate")).toBeNull();
+  });
+});
+
+describe("WhyPanel", () => {
+  it("renders LinUCB copy from the shared presentation model", () => {
+    render(<WhyPanel simState={makeState("linucb")} />);
+    expect(screen.getByText(/highest LinUCB score for this context/i)).toBeTruthy();
+    expect(screen.getByText(/uncertainty bonus: 0.000/i)).toBeTruthy();
+  });
+
+  it("renders softmax-specific copy from the shared presentation model", () => {
+    render(<WhyPanel simState={makeState("softmax")} />);
+    expect(screen.getByText(/softmax distribution over policy scores/i)).toBeTruthy();
+    expect(screen.getByText(/temperature τ=1.0/i)).toBeTruthy();
   });
 });
