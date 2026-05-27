@@ -100,7 +100,7 @@ class CobaLibraryAdapter(CobaAdapter):
         self._ts: dict[int, int] = {}
         self._histories: dict[int, list[StepRecord]] = {}
         self._regret_histories: dict[int, list[float]] = {}
-        self._seeds: dict[int, int] = {}
+        self._rngs: dict[int, np.random.Generator] = {}
         self._scenarios: dict[int, ContextScenario] = {}
 
     def _cluster_bandit_kwargs(
@@ -173,7 +173,7 @@ class CobaLibraryAdapter(CobaAdapter):
         self._ts[handle] = 0
         self._histories[handle] = []
         self._regret_histories[handle] = []
-        self._seeds[handle] = seed
+        self._rngs[handle] = np.random.default_rng(seed)
         self._scenarios[handle] = scenario
 
         return handle
@@ -338,8 +338,7 @@ class CobaLibraryAdapter(CobaAdapter):
         arm_states = self._arm_states[handle]
         lin_meta = self._lin_metas[handle]
         algorithm = self._algorithms[handle]
-        rng = np.random.default_rng(self._seeds[handle])
-        self._seeds[handle] += 1
+        rng = self._rngs[handle]
         t = self._ts[handle] + 1
 
         # Sample context
@@ -437,7 +436,7 @@ class CobaLibraryAdapter(CobaAdapter):
             self._ts,
             self._histories,
             self._regret_histories,
-            self._seeds,
+            self._rngs,
             self._scenarios,
         ):
             d.pop(handle, None)

@@ -267,3 +267,32 @@ class TestHyperparamsPassthrough:
         for _ in range(5):
             adapter.step(h)
         assert adapter.get_state(h).t == 5
+
+
+class TestPersistentRng:
+    def test_same_seed_produces_identical_context_sequences(self, adapter):
+        algo = "linucb"
+        hp = {"alpha": 2.0}
+        seed = 42
+        steps = 30
+
+        h1 = adapter.create(None, algo, hp, seed, "notification_channels")
+        h2 = adapter.create(None, algo, hp, seed, "notification_channels")
+
+        ctx1 = [adapter.step(h1).context for _ in range(steps)]
+        ctx2 = [adapter.step(h2).context for _ in range(steps)]
+
+        assert ctx1 == ctx2
+
+    def test_different_seeds_produce_different_sequences(self, adapter):
+        algo = "linucb"
+        hp = {"alpha": 2.0}
+        steps = 10
+
+        h1 = adapter.create(None, algo, hp, 42, "notification_channels")
+        h2 = adapter.create(None, algo, hp, 99, "notification_channels")
+
+        ctx1 = [adapter.step(h1).context for _ in range(steps)]
+        ctx2 = [adapter.step(h2).context for _ in range(steps)]
+
+        assert ctx1 != ctx2
