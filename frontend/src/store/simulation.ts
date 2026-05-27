@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 import type { ApiStepResponse } from "@/lib/api";
-import { DEFAULT_HYPERPARAMS } from "@/lib/constants";
+import { DEFAULT_HYPERPARAMS, MAX_HISTORY_LENGTH } from "@/lib/constants";
 import type { AlgorithmId, Arm, SimState } from "@/lib/types";
 import { create } from "zustand";
 
@@ -58,6 +58,9 @@ function normalizeSimState(state: Partial<SimState>, algorithm: AlgorithmId): Si
     featureUnits: state.featureUnits ?? [],
     featureMins: state.featureMins ?? [],
     featureMaxs: state.featureMaxs ?? [],
+    featureLowLabels: state.featureLowLabels ?? [],
+    featureHighLabels: state.featureHighLabels ?? [],
+    historyWindow: state.historyWindow ?? MAX_HISTORY_LENGTH,
     scenarioId: state.scenarioId ?? null,
   };
 }
@@ -110,7 +113,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     try {
       const stepResponse: ApiStepResponse = await api.step(simId);
       // Reconstruct SimState from StepResponse without fetching full sim
-      const newHistory = [...simState.history, stepResponse.step];
+      const cap = MAX_HISTORY_LENGTH;
+      const newHistory = [...simState.history, stepResponse.step].slice(-cap);
       const updatedSimState: SimState = {
         ...simState,
         featureNames: simState.featureNames ?? [],
@@ -119,9 +123,12 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         featureUnits: simState.featureUnits ?? [],
         featureMins: simState.featureMins ?? [],
         featureMaxs: simState.featureMaxs ?? [],
+        featureLowLabels: simState.featureLowLabels ?? [],
+        featureHighLabels: simState.featureHighLabels ?? [],
+        historyWindow: simState.historyWindow ?? MAX_HISTORY_LENGTH,
         t: stepResponse.t,
         armStates: stepResponse.armStates,
-        regretHistory: stepResponse.regretHistory,
+        regretHistory: stepResponse.regretHistory.slice(-cap),
         history: newHistory,
       };
       set({ simState: updatedSimState, isLoading: false });

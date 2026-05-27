@@ -1,4 +1,5 @@
 import { api } from "@/lib/api";
+import { MAX_HISTORY_LENGTH } from "@/lib/constants";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSimulationStore } from "../simulation";
 
@@ -385,5 +386,54 @@ describe("simulation store", () => {
     useSimulationStore.setState({ error: "Something went wrong" });
     useSimulationStore.getState().clearError();
     expect(useSimulationStore.getState().error).toBeNull();
+  });
+
+  it("step keeps history length at most MAX_HISTORY_LENGTH", async () => {
+    const longHistory = Array.from({ length: MAX_HISTORY_LENGTH }, (_, i) => ({
+      t: i + 1,
+      chosenIdx: 0,
+      outcome: 1,
+      stepRegret: 0,
+      cumRegret: 0,
+      scores: [],
+      context: null,
+      wasRandom: false,
+      trueProb: 0.5,
+    }));
+    const longRegret = Array.from({ length: MAX_HISTORY_LENGTH }, () => 0);
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ...mockSimResponse(MAX_HISTORY_LENGTH),
+      state: {
+        ...mockSimResponse(MAX_HISTORY_LENGTH).state,
+        history: longHistory,
+        regretHistory: longRegret,
+        t: MAX_HISTORY_LENGTH,
+      },
+    });
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+
+    (api.step as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      t: MAX_HISTORY_LENGTH + 1,
+      step: {
+        t: MAX_HISTORY_LENGTH + 1,
+        chosenIdx: 1,
+        outcome: 0,
+        stepRegret: 0.1,
+        cumRegret: 0.1,
+        scores: [],
+        context: null,
+        wasRandom: false,
+        trueProb: 0.5,
+      },
+      armStates: mockSimResponse(1).state.armStates,
+      regretHistory: [...longRegret, 0.1],
+    });
+    await useSimulationStore.getState().step();
+
+    const state = useSimulationStore.getState().simState;
+    expect(state).not.toBeNull();
+    expect(state?.history.length).toBeLessThanOrEqual(MAX_HISTORY_LENGTH);
+    expect(state?.regretHistory.length).toBeLessThanOrEqual(MAX_HISTORY_LENGTH);
   });
 });
