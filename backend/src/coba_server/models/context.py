@@ -82,7 +82,7 @@ class DriftConfig(BaseModel):
         """Ensure target profiles match arm count and feature count."""
         if len(self.target_profiles) != n_arms:
             raise ValueError(
-                f"DriftConfig has {len(self.target_profiles)} target profiles "
+                f"DriftConfig.target_profiles has {len(self.target_profiles)} profiles "
                 f"but scenario defines {n_arms} arms"
             )
         for i, profile in enumerate(self.target_profiles):

@@ -10,6 +10,21 @@ from coba_server.models.context import (
     RewardProfile,
 )
 
+_ARM_COLORS = ["#228be6", "#12b886", "#fd7e14", "#7950f2", "#e64980", "#2b8a3e"]
+_ARM_LIGHT_COLORS = ["#e7f5ff", "#e6fcf5", "#fff4e6", "#f3f0ff", "#fce4ec", "#d3f9d8"]
+
+
+def _with_palette(arms: list[dict]) -> list[dict]:
+    return [
+        {
+            **arm,
+            "color": arm.get("color") or _ARM_COLORS[i % len(_ARM_COLORS)],
+            "light_color": arm.get("light_color") or _ARM_LIGHT_COLORS[i % len(_ARM_LIGHT_COLORS)],
+        }
+        for i, arm in enumerate(arms)
+    ]
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Scenario A: Notification Channels
 # Good for: LinUCB, LinTS, Logistic — clear linear reward structure
@@ -45,12 +60,14 @@ NOTIFICATION_CHANNELS = ContextScenario(
             unit="days",
         ),
     ],
-    arms=[
-        {"id": "email", "label": "Email", "true_prob": 0.2},
-        {"id": "sms", "label": "SMS", "true_prob": 0.5},
-        {"id": "push", "label": "Push", "true_prob": 0.7},
-        {"id": "inapp", "label": "In-App", "true_prob": 0.4},
-    ],
+    arms=_with_palette(
+        [
+            {"id": "email", "label": "Email", "true_prob": 0.2},
+            {"id": "sms", "label": "SMS", "true_prob": 0.5},
+            {"id": "push", "label": "Push", "true_prob": 0.7},
+            {"id": "inapp", "label": "In-App", "true_prob": 0.4},
+        ]
+    ),
     reward_profiles=[
         RewardProfile(
             weights=[-0.6, 0.7],
@@ -136,13 +153,15 @@ NEWS_FEED = ContextScenario(
             unit=None,
         ),
     ],
-    arms=[
-        {"id": "sports", "label": "Sports", "true_prob": 0.6},
-        {"id": "tech", "label": "Tech", "true_prob": 0.5},
-        {"id": "lifestyle", "label": "Lifestyle", "true_prob": 0.4},
-        {"id": "politics", "label": "Politics", "true_prob": 0.3},
-        {"id": "entertainment", "label": "Entertainment", "true_prob": 0.5},
-    ],
+    arms=_with_palette(
+        [
+            {"id": "sports", "label": "Sports", "true_prob": 0.6},
+            {"id": "tech", "label": "Tech", "true_prob": 0.5},
+            {"id": "lifestyle", "label": "Lifestyle", "true_prob": 0.4},
+            {"id": "politics", "label": "Politics", "true_prob": 0.3},
+            {"id": "entertainment", "label": "Entertainment", "true_prob": 0.5},
+        ]
+    ),
     reward_profiles=[
         RewardProfile(
             weights=[0.7, 0.6],
@@ -228,13 +247,15 @@ PRODUCT_RECOMMENDATIONS = ContextScenario(
             unit=None,
         ),
     ],
-    arms=[
-        {"id": "premium", "label": "Premium", "true_prob": 0.5},
-        {"id": "midrange", "label": "Mid-Range", "true_prob": 0.6},
-        {"id": "budget", "label": "Budget", "true_prob": 0.5},
-        {"id": "flashsale", "label": "Flash-Sale", "true_prob": 0.55},
-        {"id": "bundle", "label": "Bundle", "true_prob": 0.6},
-    ],
+    arms=_with_palette(
+        [
+            {"id": "premium", "label": "Premium", "true_prob": 0.5},
+            {"id": "midrange", "label": "Mid-Range", "true_prob": 0.6},
+            {"id": "budget", "label": "Budget", "true_prob": 0.5},
+            {"id": "flashsale", "label": "Flash-Sale", "true_prob": 0.55},
+            {"id": "bundle", "label": "Bundle", "true_prob": 0.6},
+        ]
+    ),
     reward_profiles=[
         RewardProfile(
             weights=[-0.8, 0.7],
@@ -319,13 +340,15 @@ CONTENT_FORMAT = ContextScenario(
             unit=None,
         ),
     ],
-    arms=[
-        {"id": "shortform", "label": "Short-Form Video", "true_prob": 0.7},
-        {"id": "longform", "label": "Long-Form Article", "true_prob": 0.4},
-        {"id": "infographic", "label": "Infographic", "true_prob": 0.5},
-        {"id": "podcast", "label": "Podcast", "true_prob": 0.45},
-        {"id": "interactive", "label": "Interactive", "true_prob": 0.5},
-    ],
+    arms=_with_palette(
+        [
+            {"id": "shortform", "label": "Short-Form Video", "true_prob": 0.7},
+            {"id": "longform", "label": "Long-Form Article", "true_prob": 0.4},
+            {"id": "infographic", "label": "Infographic", "true_prob": 0.5},
+            {"id": "podcast", "label": "Podcast", "true_prob": 0.45},
+            {"id": "interactive", "label": "Interactive", "true_prob": 0.5},
+        ]
+    ),
     reward_profiles=[
         RewardProfile(
             weights=[0.2, 0.6],
@@ -443,12 +466,14 @@ AD_CREATIVE_SELECTION = ContextScenario(
             unit=None,
         ),
     ],
-    arms=[
-        {"id": "video", "label": "Video Ad", "true_prob": 0.6},
-        {"id": "carousel", "label": "Carousel", "true_prob": 0.55},
-        {"id": "banner", "label": "Static Banner", "true_prob": 0.4},
-        {"id": "textonly", "label": "Text Only", "true_prob": 0.35},
-    ],
+    arms=_with_palette(
+        [
+            {"id": "video", "label": "Video Ad", "true_prob": 0.6},
+            {"id": "carousel", "label": "Carousel", "true_prob": 0.55},
+            {"id": "banner", "label": "Static Banner", "true_prob": 0.4},
+            {"id": "textonly", "label": "Text Only", "true_prob": 0.35},
+        ]
+    ),
     reward_profiles=[
         RewardProfile(
             weights=[-0.7, 0.6],

@@ -1,10 +1,12 @@
 """Tests for InMemoryCobaAdapter and SimulationService."""
 
+import time
+
 import pytest
 
-from coba_server.models.simulation import ArmConfig, CreateSimRequest
+from coba_server.models.simulation import ArmConfig, CreateSimRequest, StepRecord
 from coba_server.services.coba_adapter_real import CobaLibraryAdapter
-from coba_server.services.simulator import SimulationService
+from coba_server.services.simulator import SIMULATION_TTL_SECONDS, SimulationService
 
 
 @pytest.fixture
@@ -124,3 +126,103 @@ class TestSimulationService:
         true_values = [row["true"] for row in results.accuracy_table]
         assert any(v != 0.01 for v in true_values)
         assert results.best_arm_found in {a.label for a in arms}
+
+
+class TestPruneExpired:
+    def test_prune_expired_removes_old_sim(self, service, sim_ucb1):
+        service._created_at[sim_ucb1.id] = time.time() - SIMULATION_TTL_SECONDS - 1
+        service.prune_expired()
+        assert service.get(sim_ucb1.id) is None
+
+    def test_prune_expired_keeps_fresh_sim(self, service, sim_ucb1):
+        service._created_at[sim_ucb1.id] = time.time()
+        service.prune_expired()
+        assert service.get(sim_ucb1.id) is not None
+
+    def test_prune_expired_idempotent(self, service, sim_ucb1):
+        service._created_at[sim_ucb1.id] = time.time() - SIMULATION_TTL_SECONDS - 1
+        service.prune_expired()
+        service.prune_expired()
+        assert service.get(sim_ucb1.id) is None
+
+
+class TestGetResultsConvergence:
+    def test_convergence_step_detected(self, service, sim_ucb1):
+        sim = service.get(sim_ucb1.id)
+        sim.state.t = 10
+        sim.state.arm_states[0].n = 2
+        sim.state.arm_states[0].successes = 0
+        sim.state.arm_states[0].failures = 2
+        sim.state.arm_states[1].n = 8
+        sim.state.arm_states[1].successes = 6
+        sim.state.arm_states[1].failures = 2
+        sim.state.regret_history = [0.1 * (i + 1) for i in range(10)]
+        sim.state.history = [
+            StepRecord(
+                t=i + 1,
+                chosen_idx=0 if i < 2 else 1,
+                outcome=1 if i >= 2 else 0,
+                step_regret=0.1,
+                cum_regret=0.1 * (i + 1),
+                scores=[],
+                was_random=False,
+                true_prob=0.8 if i >= 2 else 0.2,
+            )
+            for i in range(10)
+        ]
+
+        results = service.get_results(sim_ucb1.id)
+        assert "Converged around step 3." in results.narrative
+
+    def test_no_convergence_when_best_arm_not_dominant(self, service, sim_ucb1):
+        sim = service.get(sim_ucb1.id)
+        sim.state.t = 10
+        sim.state.arm_states[0].n = 5
+        sim.state.arm_states[0].successes = 1
+        sim.state.arm_states[0].failures = 4
+        sim.state.arm_states[1].n = 5
+        sim.state.arm_states[1].successes = 4
+        sim.state.arm_states[1].failures = 1
+        sim.state.regret_history = [0.1 * (i + 1) for i in range(10)]
+        sim.state.history = [
+            StepRecord(
+                t=i + 1,
+                chosen_idx=i % 2,
+                outcome=1 if i % 2 else 0,
+                step_regret=0.1,
+                cum_regret=0.1 * (i + 1),
+                scores=[],
+                was_random=False,
+                true_prob=0.8 if i % 2 else 0.2,
+            )
+            for i in range(10)
+        ]
+
+        results = service.get_results(sim_ucb1.id)
+        assert "Converged around step" not in results.narrative
+
+    def test_results_at_t0(self, service, sim_ucb1):
+        results = service.get_results(sim_ucb1.id)
+        assert results.total_steps == 0
+        assert results.best_arm_found is None
+        assert results.accuracy_table == []
+
+
+class TestScenarioDrivenCreation:
+    def test_create_with_none_arms_uses_scenario(self, service):
+        sim = service.create(
+            CreateSimRequest(arms=None, algorithm="linucb", seed=42, scenario_id="news_feed")
+        )
+        assert len(sim.state.arms) == 5
+        assert sim.state.arms[0].label == "Sports"
+        assert sim.state.arms[0].color is not None
+        assert sim.state.arms[0].light_color is not None
+
+    def test_scenario_id_stored_on_simulation(self, service):
+        sim = service.create(
+            CreateSimRequest(
+                arms=None, algorithm="linucb", seed=42, scenario_id="product_recommendations"
+            )
+        )
+        assert sim.scenario_id == "product_recommendations"
+        assert sim.state.scenario_id == "product_recommendations"

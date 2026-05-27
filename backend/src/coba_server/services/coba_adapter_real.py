@@ -267,6 +267,8 @@ class CobaLibraryAdapter(CobaAdapter):
         Returns (weights, bias).
         """
         scenario = self._scenarios[handle]
+        if arm_idx >= len(scenario.reward_profiles):
+            raise IndexError("Scenario reward profile missing for arm")
         profile = scenario.reward_profiles[arm_idx]
 
         if not scenario.drift_config:
@@ -312,10 +314,16 @@ class CobaLibraryAdapter(CobaAdapter):
         if algorithm in CONTEXTUAL_ALGORITHMS:
             # Compute probabilities from scenario reward profiles
             probs = []
-            for i in range(len(arm_configs)):
-                weights, bias = self._get_reward_weights(handle, i, t)
-                logit = float(np.dot(weights, context) + bias)
-                prob = _sig(logit)
+            for i, arm in enumerate(arm_configs):
+                if i < len(self._scenarios[handle].reward_profiles):
+                    weights, bias = self._get_reward_weights(handle, i, t)
+                    logit = float(np.dot(weights, context) + bias)
+                    prob = _sig(logit)
+                else:
+                    # Custom arm lists can exceed the scenario template's reward
+                    # profiles. Fall back to the arm's static true_prob instead of
+                    # failing the whole simulation.
+                    prob = float(arm.true_prob)
                 probs.append(prob)
         else:
             # Context-free: use arm.true_prob
@@ -339,7 +347,8 @@ class CobaLibraryAdapter(CobaAdapter):
 
         dec = bandit.decide(context)
         chosen_label = dec.chosen_arm
-        chosen_idx = arm_labels.index(chosen_label) if chosen_label else 0
+        chosen_label_str = chosen_label if isinstance(chosen_label, str) else None
+        chosen_idx = arm_labels.index(chosen_label_str) if chosen_label_str else 0
 
         scores = self._build_scores(dec, arm_labels)
         true_probs, optimal_idx, optimal_prob = self._true_probabilities(handle, context, t)
@@ -349,7 +358,7 @@ class CobaLibraryAdapter(CobaAdapter):
         step_regret = optimal_prob - true_prob
         prev_cum = self._regret_histories[handle][-1] if self._regret_histories[handle] else 0.0
         cum_regret = prev_cum + step_regret
-        bandit.update(context, chosen_label, float(outcome))
+        bandit.update(context, chosen_label_str or arm_labels[chosen_idx], float(outcome))
 
         # Update shadow arm_states (frontend compatibility). Longer-term, prefer
         # ClusterBandit.get_stats() once frontend consumes coba-native state.

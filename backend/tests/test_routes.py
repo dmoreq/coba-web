@@ -57,8 +57,8 @@ class TestCreateSimulation:
             for sid in created_ids:
                 client.delete(f"/api/simulate/{sid}")
 
-    def test_invalid_body_422(self, client):
-        assert client.post("/api/simulate", json={}).status_code == 422
+    def test_malformed_body_422(self, client):
+        assert client.post("/api/simulate", json={"seed": "bad"}).status_code == 422
 
     def test_too_few_arms_422(self, client):
         assert (
@@ -100,6 +100,16 @@ class TestRun:
     def test_invalid_steps_422(self, client):
         sid = client.post("/api/simulate", json={"arms": _arms()}).json()["id"]
         assert client.post(f"/api/simulate/{sid}/run", json={"steps": 0}).status_code == 422
+
+    def test_run_max_steps_boundary(self, client):
+        sid = client.post("/api/simulate", json={"arms": _arms()}).json()["id"]
+        r = client.post(f"/api/simulate/{sid}/run", json={"steps": 10_000})
+        assert r.status_code == 200
+        assert r.json()["steps_run"] == 10_000
+
+    def test_run_over_max_rejected(self, client):
+        sid = client.post("/api/simulate", json={"arms": _arms()}).json()["id"]
+        assert client.post(f"/api/simulate/{sid}/run", json={"steps": 10_001}).status_code == 422
 
 
 class TestDelete:

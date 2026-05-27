@@ -94,7 +94,7 @@ class Simulation(BaseModel):
 
 
 class CreateSimRequest(BaseModel):
-    arms: list[ArmConfig] | None = None
+    arms: list[ArmConfig] | None = Field(default=None, min_length=2, max_length=10)
     algorithm: AlgorithmId = "ucb1"
     hyperparams: dict[str, float] = Field(default_factory=dict)
     seed: int = 42
