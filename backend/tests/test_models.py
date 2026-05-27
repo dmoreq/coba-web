@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from coba_server.models.context import ContextFeature, ContextScenario, RewardProfile
 from coba_server.models.simulation import (
     ArmConfig,
     ArmState,
@@ -12,6 +13,54 @@ from coba_server.models.simulation import (
     SimState,
     StepRecord,
 )
+
+
+def _minimal_scenario_features(n: int) -> list[ContextFeature]:
+    return [
+        ContextFeature(name=f"f{i}", label=f"F{i}", description="test feature") for i in range(n)
+    ]
+
+
+def _minimal_arms_and_profiles(n_features: int):
+    arms = [
+        {"id": "a", "label": "A", "true_prob": 0.5},
+        {"id": "b", "label": "B", "true_prob": 0.5},
+    ]
+    profiles = [
+        RewardProfile(weights=[0.0] * n_features, bias=0.0),
+        RewardProfile(weights=[0.0] * n_features, bias=0.0),
+    ]
+    return arms, profiles
+
+
+class TestContextScenarioFeatureCap:
+    def test_accepts_sixteen_features(self):
+        n = 16
+        arms, profiles = _minimal_arms_and_profiles(n)
+        scenario = ContextScenario(
+            id="test_sixteen",
+            label="Test",
+            description="d",
+            domain="Test",
+            features=_minimal_scenario_features(n),
+            arms=arms,
+            reward_profiles=profiles,
+        )
+        assert scenario.get_feature_count() == 16
+
+    def test_rejects_seventeen_features(self):
+        n = 17
+        arms, profiles = _minimal_arms_and_profiles(n)
+        with pytest.raises(ValidationError):
+            ContextScenario(
+                id="test_seventeen",
+                label="Test",
+                description="d",
+                domain="Test",
+                features=_minimal_scenario_features(n),
+                arms=arms,
+                reward_profiles=profiles,
+            )
 
 
 class TestArmConfig:

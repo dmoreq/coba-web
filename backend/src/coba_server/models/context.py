@@ -104,7 +104,7 @@ class ContextScenario(BaseModel):
     )
 
     features: list[ContextFeature] = Field(
-        ..., min_length=2, max_length=8, description="Context feature definitions"
+        ..., min_length=2, max_length=16, description="Context feature definitions"
     )
 
     arms: list[dict[str, Any]] = Field(
