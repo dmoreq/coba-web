@@ -1,6 +1,7 @@
 import {
   ALGORITHM_ORDER,
   ALGO_META,
+  CONTEXTUAL_ALGORITHMS,
   DEFAULT_HYPERPARAMS,
   HYPERPARAM_META,
   createDefaultSimState,
@@ -31,6 +32,12 @@ describe("ALGORITHM_ORDER", () => {
 
   it("starts with context-free algorithms", () => {
     expect(ALGORITHM_ORDER.slice(0, 3)).toEqual(["ucb1", "thompson", "epsilon_greedy"]);
+  });
+});
+
+describe("CONTEXTUAL_ALGORITHMS", () => {
+  it("includes epsilon_greedy because the backend treats it as contextual", () => {
+    expect(CONTEXTUAL_ALGORITHMS.has("epsilon_greedy")).toBe(true);
   });
 });
 

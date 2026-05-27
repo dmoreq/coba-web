@@ -1,6 +1,6 @@
 /** Algorithm metadata — pure UI presentation, no engine logic. */
 
-import type { AlgoMeta, AlgorithmId, Arm, SimState } from "@/lib/types";
+import type { AlgoMeta, AlgorithmId, Arm, ArmState, Score, SimState } from "@/lib/types";
 
 /** Algorithm metadata for display */
 export const ALGO_META: Record<AlgorithmId, AlgoMeta> = {
@@ -22,7 +22,7 @@ export const ALGO_META: Record<AlgorithmId, AlgoMeta> = {
     label: "\u03B5-Greedy",
     color: "#fd7e14",
     light: "#fff4e6",
-    desc: "Random exploration with probability \u03B5, else exploit best estimated arm",
+    desc: "Estimator-based \u03B5 exploration; in this simulator it uses contextual features",
     hyperparams: ["epsilon", "l2_lambda"],
   },
   linucb: {
@@ -258,6 +258,7 @@ export const MAX_HISTORY_LENGTH = 150;
 
 /** Algorithms that use context — show context panel */
 export const CONTEXTUAL_ALGORITHMS = new Set([
+  "epsilon_greedy",
   "linucb",
   "lints",
   "linucb_hybrid",
@@ -272,6 +273,81 @@ export const CONTEXTUAL_ALGORITHMS = new Set([
   "random_forest_ucb",
   "random_forest_ts",
 ]);
+
+export type EstimateRenderMode = "beta" | "decomposed" | "raw";
+
+const DECOMPOSED_ESTIMATE_ALGORITHMS = new Set([
+  "ucb1",
+  "linucb",
+  "linucb_hybrid",
+  "linucb_sw",
+  "logistic_ucb",
+  "gp_ucb",
+  "random_forest_ucb",
+  "bootstrapped_ucb",
+]);
+
+export function getCurrentTrueProb(simState: SimState, armIndex: number): number {
+  const lastStep = simState.history[simState.history.length - 1];
+  return lastStep?.allTrueProbs?.[armIndex] ?? simState.arms[armIndex]?.trueProb ?? 0;
+}
+
+export function isBestArmRightNow(simState: SimState, armIndex: number): boolean {
+  const lastStep = simState.history[simState.history.length - 1];
+  if (lastStep?.allTrueProbs?.length === simState.arms.length) {
+    const bestProb = Math.max(...lastStep.allTrueProbs);
+    return getCurrentTrueProb(simState, armIndex) >= bestProb - 0.001;
+  }
+
+  const st = simState.armStates[armIndex];
+  if (!st || simState.t <= 5 || st.n === 0) return false;
+
+  const mean = st.successes / st.n;
+  return simState.arms.every((_, i) => {
+    if (i === armIndex) return true;
+    const other = simState.armStates[i];
+    return other.n === 0 || other.successes / other.n <= mean + 0.001;
+  });
+}
+
+export function getEstimateRenderMode(
+  algorithm: string,
+  _score: Score | null | undefined,
+): EstimateRenderMode {
+  if (algorithm === "thompson") return "beta";
+  if (DECOMPOSED_ESTIMATE_ALGORITHMS.has(algorithm)) return "decomposed";
+  return "raw";
+}
+
+export function formatEstimateStat(
+  algorithm: string,
+  score: Score | null | undefined,
+  armState: ArmState,
+): string {
+  const mean = score?.mean ?? 0;
+  const bonus = score?.bonus ?? 0;
+  const rawScore = score?.score ?? 0;
+  const sample = score?.sample;
+
+  if (algorithm === "thompson") {
+    if (sample != null) return `μ=${mean.toFixed(3)} s=${sample.toFixed(3)}`;
+    return `μ=${mean.toFixed(3)} score=${rawScore.toFixed(3)}`;
+  }
+
+  if (bonus > 0) {
+    return `${mean.toFixed(3)} + ${Math.min(bonus, 9.99).toFixed(3)}`;
+  }
+
+  if (mean > 0 && rawScore === 0) {
+    return mean.toFixed(3);
+  }
+
+  if (rawScore > 0 || armState.n > 0) {
+    return `score=${Math.min(rawScore, 99).toFixed(3)}`;
+  }
+
+  return "—";
+}
 
 /**
  * Create a default empty SimState for initialization.
@@ -292,6 +368,9 @@ export function createDefaultSimState(algorithm: AlgorithmId = "ucb1"): SimState
     hyperparams: { ...hp },
     alpha: hp.alpha ?? 2.0,
     epsilon: hp.epsilon ?? 0.1,
+    scenarioId: "notification_channels",
+    featureNames: [],
+    featureLabels: [],
     t: 0,
     history: [],
     regretHistory: [],

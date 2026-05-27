@@ -2,7 +2,7 @@
 
 import { ContextPanel } from "@/components/playground/ContextPanel";
 import { TruthToggle } from "@/components/shared/TruthToggle";
-import { CONTEXTUAL_ALGORITHMS } from "@/lib/constants";
+import { CONTEXTUAL_ALGORITHMS, getCurrentTrueProb, isBestArmRightNow } from "@/lib/constants";
 import type { SimState } from "@/lib/types";
 import { memo } from "react";
 
@@ -13,7 +13,7 @@ interface EnvPanelProps {
 }
 
 function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProps) {
-  const { arms, armStates, algorithm, history, t } = simState;
+  const { arms, armStates, algorithm, history } = simState;
   const lastStep = history[history.length - 1];
 
   return (
@@ -35,15 +35,10 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
       {arms.map((arm, i) => {
         const st = armStates[i];
         const mean = st.n === 0 ? null : st.successes / st.n;
-        const isTop =
-          t > 5 &&
-          mean !== null &&
-          arms.every(
-            (_, j) =>
-              j === i ||
-              armStates[j].n === 0 ||
-              armStates[j].successes / armStates[j].n <= mean + 0.001,
-          );
+        const isContextual = CONTEXTUAL_ALGORITHMS.has(algorithm);
+        const displayedTruth = getCurrentTrueProb(simState, i);
+        const isTop = isBestArmRightNow(simState, i);
+        const badgeText = isContextual ? "best now" : "leads";
 
         return (
           <div
@@ -73,7 +68,7 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
                 className="w-[34px] text-right font-mono text-[11px] font-semibold flex-shrink-0"
                 style={{ color: arm.color }}
               >
-                {(arm.trueProb * 100).toFixed(0)}%
+                {(displayedTruth * 100).toFixed(0)}%
               </div>
             )}
             {isTop && (
@@ -81,7 +76,7 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
                 className="text-[9px] px-[5px] py-[1px] rounded-full font-bold flex-shrink-0"
                 style={{ background: arm.lightColor, color: arm.color }}
               >
-                leads
+                {badgeText}
               </span>
             )}
           </div>
