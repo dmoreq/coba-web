@@ -9,6 +9,14 @@ from coba_server.models.context import (
     PopulationSegment,
     RewardProfile,
 )
+from coba_server.utils.cyclic_time import encode_cyclic_time, hour_from_legacy_time_feature
+
+
+def _segment_mean_eng_time(engagement: float, legacy_time: float) -> list[float]:
+    """Build [engagement, time_sin, time_cos] from legacy 2-D segment means."""
+    sin_t, cos_t = encode_cyclic_time(hour_from_legacy_time_feature(legacy_time))
+    return [engagement, sin_t, cos_t]
+
 
 _ARM_COLORS = ["#228be6", "#12b886", "#fd7e14", "#7950f2", "#e64980", "#2b8a3e"]
 _ARM_LIGHT_COLORS = ["#e7f5ff", "#e6fcf5", "#fff4e6", "#f3f0ff", "#fce4ec", "#d3f9d8"]
@@ -151,14 +159,24 @@ NEWS_FEED = ContextScenario(
             high_label="power reader",
         ),
         ContextFeature(
-            name="time_of_day",
-            label="Time of Day",
-            description="Normalised time of day (-1: midnight, +1: noon)",
+            name="time_of_day_sin",
+            label="Time (sin)",
+            description="Sine component of cyclic time-of-day encoding",
             min_val=-1.0,
             max_val=1.0,
             unit=None,
-            low_label="midnight",
-            high_label="noon",
+            low_label="night",
+            high_label="day",
+        ),
+        ContextFeature(
+            name="time_of_day_cos",
+            label="Time (cos)",
+            description="Cosine component of cyclic time-of-day encoding",
+            min_val=-1.0,
+            max_val=1.0,
+            unit=None,
+            low_label="night",
+            high_label="day",
         ),
     ],
     arms=_with_palette(
@@ -172,27 +190,28 @@ NEWS_FEED = ContextScenario(
     ),
     reward_profiles=[
         RewardProfile(
-            weights=[0.7, 0.6],
+            weights=[0.3, 0.1, 0.1],
             bias=0.0,
-            description="Sports: high for engaged morning readers (interaction effect)",
+            interaction_weights=[0.5, 0.4, 0.05],
+            description="Sports peaks when engaged AND morning (interaction on time sin/cos)",
         ),
         RewardProfile(
-            weights=[0.5, -0.1],
+            weights=[0.5, -0.05, -0.05],
             bias=0.1,
             description="Tech: consistent across engagement, slight morning lean",
         ),
         RewardProfile(
-            weights=[-0.1, -0.7],
+            weights=[-0.1, -0.35, -0.35],
             bias=0.3,
             description="Lifestyle: evening + low engagement peak",
         ),
         RewardProfile(
-            weights=[0.8, 0.2],
+            weights=[0.8, 0.1, 0.1],
             bias=-0.2,
             description="Politics: power users only, time-insensitive",
         ),
         RewardProfile(
-            weights=[-0.3, -0.5],
+            weights=[-0.3, -0.25, -0.25],
             bias=0.4,
             description="Entertainment: strong evening baseline, passive users responsive",
         ),
@@ -201,20 +220,20 @@ NEWS_FEED = ContextScenario(
         PopulationSegment(
             name="Morning Commuter",
             weight=0.45,
-            context_mean=[0.6, 0.7],
-            context_std=[0.2, 0.15],
+            context_mean=_segment_mean_eng_time(0.6, 0.7),
+            context_std=[0.2, 0.15, 0.15],
         ),
         PopulationSegment(
             name="Weekend Browser",
             weight=0.35,
-            context_mean=[-0.5, -0.3],
-            context_std=[0.3, 0.4],
+            context_mean=_segment_mean_eng_time(-0.5, -0.3),
+            context_std=[0.3, 0.25, 0.25],
         ),
         PopulationSegment(
             name="Power Reader",
             weight=0.2,
-            context_mean=[0.9, 0.2],
-            context_std=[0.1, 0.25],
+            context_mean=_segment_mean_eng_time(0.9, 0.2),
+            context_std=[0.1, 0.2, 0.2],
         ),
     ],
     drift_config=None,
@@ -285,8 +304,9 @@ PRODUCT_RECOMMENDATIONS = ContextScenario(
             description="Budget: high for price-sensitive, low-cart users",
         ),
         RewardProfile(
-            weights=[0.7, -0.7],
-            bias=0.05,
+            weights=[0.5, -0.5],
+            bias=0.3,
+            interaction_weights=[-1.75],
             description="Flash-Sale: bimodal—both price-sensitive and price-insensitive extremes",
         ),
         RewardProfile(
@@ -496,24 +516,24 @@ AD_CREATIVE_SELECTION = ContextScenario(
     ),
     reward_profiles=[
         RewardProfile(
-            weights=[-0.7, 0.6],
-            bias=0.1,
-            description="Video Ad: high engagement when relevant; fatigue sensitive",
+            weights=[-0.6, 0.8],
+            bias=0.15,
+            description="Video Ad: high engagement when relevant; shared fatigue effect",
         ),
         RewardProfile(
-            weights=[-0.5, 0.5],
-            bias=0.15,
+            weights=[-0.6, 0.6],
+            bias=0.2,
             description="Carousel: balanced; relevance-driven",
         ),
         RewardProfile(
-            weights=[-0.3, 0.3],
-            bias=0.1,
-            description="Static Banner: lower fatigue sensitivity; modest relevance boost",
+            weights=[-0.6, 0.4],
+            bias=0.15,
+            description="Static Banner: shared fatigue; modest relevance boost",
         ),
         RewardProfile(
-            weights=[-0.2, 0.2],
-            bias=0.05,
-            description="Text Only: minimal impact from relevance or fatigue",
+            weights=[-0.6, 0.2],
+            bias=0.1,
+            description="Text Only: shared fatigue; minimal relevance boost",
         ),
     ],
     population_segments=[

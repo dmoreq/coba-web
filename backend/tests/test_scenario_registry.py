@@ -205,7 +205,7 @@ class TestContextScenario:
 
     def test_get_feature_count(self):
         assert NOTIFICATION_CHANNELS.get_feature_count() == 2
-        assert NEWS_FEED.get_feature_count() == 2
+        assert NEWS_FEED.get_feature_count() == 3
         assert PRODUCT_RECOMMENDATIONS.get_feature_count() == 2
 
     def test_get_arm_count(self):
@@ -311,6 +311,23 @@ class TestScenarioProperties:
                 for weight in profile.weights:
                     assert -2 <= weight <= 2, f"Weight {weight} out of range"
                 assert -2 <= profile.bias <= 2, f"Bias {profile.bias} out of range"
+
+    def test_news_feed_features_are_length_three(self):
+        scenario = get_scenario("news_feed")
+        assert scenario.get_feature_count() == 3
+        assert all(len(p.weights) == 3 for p in scenario.reward_profiles)
+
+    def test_ad_fatigue_weight_identical_across_all_arms(self):
+        scenario = get_scenario("ad_creative_selection")
+        fatigue_weights = [round(p.weights[0], 6) for p in scenario.reward_profiles]
+        assert len(set(fatigue_weights)) == 1, (
+            f"ad_fatigue must be identical across arms, got {fatigue_weights}"
+        )
+
+    def test_ad_creative_relevance_weights_differ_per_arm(self):
+        scenario = get_scenario("ad_creative_selection")
+        relevance_weights = [p.weights[1] for p in scenario.reward_profiles]
+        assert len(set(relevance_weights)) == len(relevance_weights)
 
     def test_population_means_within_feature_bounds(self):
         """Population segment context means should be within feature bounds."""
