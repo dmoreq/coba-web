@@ -1,6 +1,6 @@
 "use client";
 
-import { ALGO_META, getEstimateRenderMode } from "@/lib/constants";
+import { ALGO_META, getEstimateLegend } from "@/lib/constants";
 import type { AlgorithmId, SimState } from "@/lib/types";
 import { memo, useState } from "react";
 import { ArmRow } from "./ArmRow";
@@ -19,12 +19,7 @@ function UCBDisplayComponent({ simState, showGroundTruth }: UCBDisplayProps) {
     ? lastStep.scores
     : arms.map(() => ({ mean: 0, bonus: 0, score: 0, formula: "" }));
   const maxScore = Math.max(...scores.map((s) => s.score), 1);
-  const hasBonusBreakdown = scores.some(
-    (score) => getEstimateRenderMode(algorithm, score) === "decomposed",
-  );
-  const hasRawScores = scores.some(
-    (score) => getEstimateRenderMode(algorithm, score) === "raw" && score.score > 0,
-  );
+  const estimateLegend = getEstimateLegend(algorithm);
 
   const meta = ALGO_META[algorithm as AlgorithmId] ?? ALGO_META.ucb1;
 
@@ -86,23 +81,23 @@ function UCBDisplayComponent({ simState, showGroundTruth }: UCBDisplayProps) {
         />
       ))}
 
-      {hasBonusBreakdown && (
+      {estimateLegend?.secondary && (
         <div className="flex gap-3 mt-[6px] items-center">
           <div className="flex items-center gap-1">
             <div className="w-4 h-[6px] rounded-xs" style={{ background: "#228be6" }} />
-            <span className="text-[10px] text-gray-6">Mean estimate</span>
+            <span className="text-[10px] text-gray-6">{estimateLegend.primary}</span>
           </div>
           <div className="flex items-center gap-1">
             <div className="w-4 h-[6px] rounded-xs opacity-50" style={{ background: "#adb5bd" }} />
-            <span className="text-[10px] text-gray-6">Exploration bonus</span>
+            <span className="text-[10px] text-gray-6">{estimateLegend.secondary}</span>
           </div>
         </div>
       )}
-      {!hasBonusBreakdown && hasRawScores && algorithm !== "thompson" && (
+      {estimateLegend && !estimateLegend.secondary && (
         <div className="flex gap-3 mt-[6px] items-center">
           <div className="flex items-center gap-1">
             <div className="w-4 h-[6px] rounded-xs opacity-60" style={{ background: "#495057" }} />
-            <span className="text-[10px] text-gray-6">Policy score</span>
+            <span className="text-[10px] text-gray-6">{estimateLegend.primary}</span>
           </div>
         </div>
       )}
