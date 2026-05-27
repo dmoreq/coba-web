@@ -3,7 +3,13 @@
 import pytest
 from pydantic import ValidationError
 
-from coba_server.models.context import ContextFeature, ContextScenario, RewardProfile
+from coba_server.models.context import (
+    ContextFeature,
+    ContextScenario,
+    DriftConfig,
+    PopulationSegment,
+    RewardProfile,
+)
 from coba_server.models.simulation import (
     ArmConfig,
     ArmState,
@@ -177,3 +183,72 @@ class TestRunRequest:
             RunRequest(steps=0)
         with pytest.raises(ValidationError):
             RunRequest(steps=-5)
+
+
+class TestPopulationSegmentValidation:
+    def test_rejects_wrong_correlation_count(self):
+        segment = PopulationSegment(
+            name="Bad",
+            weight=1.0,
+            context_mean=[0.0, 0.0],
+            context_std=[1.0, 1.0],
+            context_correlations=[0.5, 0.1, 0.2],
+        )
+        with pytest.raises(ValueError, match="context_correlations"):
+            segment.validate_feature_count(2)
+
+
+class TestContextScenarioValidateConsistencyErrors:
+    def test_reward_profile_mismatch_wraps_index(self):
+        arms, profiles = _minimal_arms_and_profiles(3)
+        scenario = ContextScenario(
+            id="bad_reward",
+            label="Bad",
+            description="d",
+            domain="Test",
+            features=_minimal_scenario_features(2),
+            arms=arms,
+            reward_profiles=profiles,
+        )
+        with pytest.raises(ValueError, match=r"reward_profiles\[0\]"):
+            scenario.validate_consistency()
+
+    def test_population_segment_mismatch_wraps_index(self):
+        arms, profiles = _minimal_arms_and_profiles(2)
+        bad_segment = PopulationSegment(
+            name="S",
+            weight=1.0,
+            context_mean=[0.0],
+            context_std=[1.0],
+        )
+        scenario = ContextScenario(
+            id="bad_segment",
+            label="Bad",
+            description="d",
+            domain="Test",
+            features=_minimal_scenario_features(2),
+            arms=arms,
+            reward_profiles=profiles,
+            population_segments=[bad_segment],
+        )
+        with pytest.raises(ValueError, match=r"population_segments\[0\]"):
+            scenario.validate_consistency()
+
+    def test_drift_config_mismatch_wraps_prefix(self):
+        arms, profiles = _minimal_arms_and_profiles(2)
+        scenario = ContextScenario(
+            id="bad_drift",
+            label="Bad",
+            description="d",
+            domain="Test",
+            features=_minimal_scenario_features(2),
+            arms=arms,
+            reward_profiles=profiles,
+            drift_config=DriftConfig(
+                drift_step=10,
+                drift_duration=5,
+                target_profiles=[profiles[0]],
+            ),
+        )
+        with pytest.raises(ValueError, match="drift_config"):
+            scenario.validate_consistency()
