@@ -53,8 +53,9 @@ Important settings:
 - visual snapshot path: `e2e/__screenshots__/{testFilePath}/{arg}{ext}`
 - screenshot diff tolerance: `maxDiffPixels: 150`
 - web servers:
-  - backend: `uv run uvicorn coba_server:app --port 8000`
+  - backend: `COBA_ALLOW_SIMULATION_PURGE=1 uv run uvicorn coba_server:app --port 8000`
   - frontend: `pnpm dev`
+- global setup/teardown: `POST /api/simulate/purge` clears leaked simulations before/after runs (requires `COBA_ALLOW_SIMULATION_PURGE=1` on the backend)
 
 Verification command:
 
