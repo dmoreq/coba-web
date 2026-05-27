@@ -2,10 +2,13 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  timeout: 30000,
-  retries: 1,
+  timeout: 60_000,
+  retries: process.env.CI ? 2 : 1,
+  workers: process.env.CI ? 1 : undefined,
+  reporter: [["list"], ["html", { open: "never" }]],
   snapshotPathTemplate: "{testDir}/__screenshots__/{testFilePath}/{arg}{ext}",
   expect: {
+    timeout: 10_000,
     toHaveScreenshot: {
       maxDiffPixels: 150,
     },

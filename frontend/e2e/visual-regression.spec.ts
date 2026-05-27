@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { compareStep } from "./helpers/compare";
+import { gotoPlayground, gotoResults, stepTimes } from "./helpers/playground";
 
 test.describe("Visual regression", () => {
   test("playground page after 20 steps", async ({ page }) => {
@@ -23,5 +25,21 @@ test.describe("Visual regression", () => {
     await page.goto("/settings");
     await page.waitForTimeout(1000);
     await expect(page).toHaveScreenshot("settings.png", { fullPage: true });
+  });
+
+  test("compare page after dual step", async ({ page }) => {
+    await page.goto("/compare");
+    await page.getByText("Compare Algorithms").waitFor({ timeout: 15_000 });
+    await compareStep(page);
+    await compareStep(page);
+    await expect(page).toHaveScreenshot("compare-2-steps.png", { fullPage: true });
+  });
+
+  test("results page populated", async ({ page }) => {
+    await gotoPlayground(page);
+    await stepTimes(page, 5);
+    await gotoResults(page);
+    await page.getByText("Simulation Results").waitFor({ timeout: 15_000 });
+    await expect(page).toHaveScreenshot("results-populated.png", { fullPage: true });
   });
 });
