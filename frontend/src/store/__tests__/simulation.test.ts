@@ -301,6 +301,20 @@ describe("simulation store", () => {
     expect(useSimulationStore.getState().seed).toBe(99);
   });
 
+  it("reset passes updated seed to createSimulation", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+    useSimulationStore.getState().setSeed(99);
+    await useSimulationStore.getState().reset();
+    expect(api.createSimulation).toHaveBeenLastCalledWith(
+      expect.any(Array),
+      "ucb1",
+      { alpha: 2.0 },
+      99,
+      "notification_channels",
+    );
+  });
+
   it("reset preserves hyperparams when algorithm unchanged", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
     await useSimulationStore

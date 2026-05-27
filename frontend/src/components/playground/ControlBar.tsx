@@ -11,6 +11,8 @@ interface ControlBarProps {
   simState: SimState;
   isRunning: boolean;
   speed: number;
+  seed: number;
+  onSeedChange: (seed: number) => void;
   onPlayPause: () => void;
   onStep: () => void;
   onReset: (algo?: AlgorithmId) => void;
@@ -24,6 +26,8 @@ export function ControlBar({
   simState,
   isRunning,
   speed,
+  seed,
+  onSeedChange,
   onPlayPause,
   onStep,
   onReset,
@@ -42,6 +46,18 @@ export function ControlBar({
         />
       )}
       <AlgorithmSelector selected={simState.algorithm} onChange={(a) => onReset(a)} />
+      <label className="flex items-center gap-[6px] text-[11px] text-gray-6">
+        <span className="whitespace-nowrap">Seed</span>
+        <input
+          type="number"
+          value={seed}
+          onChange={(e) => onSeedChange(Number(e.target.value))}
+          className="w-[72px] px-[8px] py-[4px] rounded-xs border border-gray-3 font-mono text-[11px] text-gray-8"
+          aria-label="Random seed"
+          data-testid="playground-seed-input"
+        />
+        <span className="text-[9px] text-gray-5 hidden sm:inline">applies on reset</span>
+      </label>
       <div className="flex-1 min-w-[8px]" />
       <PlaybackControls isRunning={isRunning} onStep={onStep} onPlayPause={onPlayPause} />
       <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={onSpeedChange} />

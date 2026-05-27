@@ -40,6 +40,8 @@ export default function PlaygroundPage() {
   const clearError = useSimulationStore((s) => s.clearError);
   const scenarioId = useSimulationStore((s) => s.scenarioId);
   const switchScenario = useSimulationStore((s) => s.switchScenario);
+  const seed = useSimulationStore((s) => s.seed);
+  const setSeed = useSimulationStore((s) => s.setSeed);
 
   const [showGT, setShowGT] = useState(false);
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
@@ -88,6 +90,8 @@ export default function PlaygroundPage() {
         simState={display}
         isRunning={isRunning}
         speed={speed}
+        seed={seed}
+        onSeedChange={setSeed}
         onPlayPause={() => (isRunning ? storePause() : storePlay())}
         onStep={storeStep}
         onReset={(algo) => storeReset(algo as AlgorithmId)}
@@ -96,7 +100,7 @@ export default function PlaygroundPage() {
         onScenarioChange={(newScenarioId) => switchScenario(newScenarioId)}
         isLoading={isLoading}
       />
-      <ScenarioInfoBar scenario={selectedScenario ?? null} />
+      <ScenarioInfoBar scenario={selectedScenario ?? null} currentAlgorithm={display.algorithm} />
       <div className="flex-1 flex overflow-hidden">
         <StepFeed
           history={display.history}

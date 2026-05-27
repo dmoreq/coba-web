@@ -1,5 +1,6 @@
 "use client";
 
+import { AlgorithmFitChip } from "@/components/playground/AlgorithmFitChip";
 import { ALGO_META } from "@/lib/constants";
 import type { AlgorithmId, ScenarioInfo } from "@/lib/types";
 import { memo, useCallback, useEffect, useState } from "react";
@@ -14,6 +15,7 @@ const DIFFICULTY_LABELS: Record<NonNullable<ScenarioInfo["difficulty"]>, string>
 
 export interface ScenarioInfoBarProps {
   scenario: ScenarioInfo | null;
+  currentAlgorithm?: AlgorithmId | null;
 }
 
 function readExpandedPreference(): boolean {
@@ -34,7 +36,7 @@ function algorithmLabel(id: string): string {
   return meta?.label ?? id;
 }
 
-function ScenarioInfoBarComponent({ scenario }: ScenarioInfoBarProps) {
+function ScenarioInfoBarComponent({ scenario, currentAlgorithm }: ScenarioInfoBarProps) {
   const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
@@ -112,8 +114,16 @@ function ScenarioInfoBarComponent({ scenario }: ScenarioInfoBarProps) {
           </div>
           {recommended.length > 0 && (
             <div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-5 mb-[4px]">
-                Recommended
+              <div className="flex items-center justify-between gap-[8px] mb-[4px]">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.06em] text-gray-5">
+                  Recommended
+                </div>
+                {currentAlgorithm && (
+                  <AlgorithmFitChip
+                    algorithm={currentAlgorithm}
+                    recommendedAlgorithms={recommended}
+                  />
+                )}
               </div>
               <div className="flex flex-wrap gap-[5px]" data-testid="scenario-recommended-chips">
                 {recommended.map((algoId) => {

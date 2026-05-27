@@ -48,6 +48,11 @@ export interface StepRecord {
   allTrueProbs?: number[] | null;
 }
 
+export interface PopulationSegmentSummary {
+  name: string;
+  weight: number;
+}
+
 /** Full simulation state — pure data, no methods */
 export interface SimState {
   arms: Arm[];
@@ -67,6 +72,7 @@ export interface SimState {
   featureLowLabels?: string[];
   featureHighLabels?: string[];
   historyWindow?: number;
+  populationSegments?: PopulationSegmentSummary[];
   t: number;
   history: StepRecord[];
   regretHistory: number[];

@@ -61,6 +61,7 @@ function normalizeSimState(state: Partial<SimState>, algorithm: AlgorithmId): Si
     featureLowLabels: state.featureLowLabels ?? [],
     featureHighLabels: state.featureHighLabels ?? [],
     historyWindow: state.historyWindow ?? MAX_HISTORY_LENGTH,
+    populationSegments: state.populationSegments ?? [],
     scenarioId: state.scenarioId ?? null,
   };
 }
@@ -126,6 +127,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         featureLowLabels: simState.featureLowLabels ?? [],
         featureHighLabels: simState.featureHighLabels ?? [],
         historyWindow: simState.historyWindow ?? MAX_HISTORY_LENGTH,
+        populationSegments: simState.populationSegments ?? [],
         t: stepResponse.t,
         armStates: stepResponse.armStates,
         regretHistory: stepResponse.regretHistory.slice(-cap),

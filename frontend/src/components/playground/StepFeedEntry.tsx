@@ -22,7 +22,16 @@ function StepFeedEntryComponent({
   const chosen = arms[step.chosenIdx];
   const isReward = step.outcome === 1;
   const [showContext, setShowContext] = useState(() => CONTEXTUAL_ALGORITHMS.has(algorithm));
-  const hasContext = step.context && featureNames.length > 0;
+  const context = step.context;
+  const featureCount = featureNames.length;
+  const contextValid =
+    context &&
+    featureCount > 0 &&
+    context.length === featureCount &&
+    context.every((v) => Number.isFinite(v));
+  const contextMismatch = context && featureCount > 0 && context.length !== featureCount;
+  const contextInvalid = context?.some((v) => !Number.isFinite(v));
+  const hasContext = Boolean(context && featureCount > 0);
 
   return (
     <div className="p-[8px_10px] rounded-sm mb-1 border border-gray-2 bg-white text-[12px] font-sans">
@@ -65,12 +74,22 @@ function StepFeedEntryComponent({
           >
             {showContext ? "▼" : "▶"} context
           </button>
-          {showContext && (
+          {showContext && contextMismatch && (
+            <output className="block mt-[5px] ml-[8px] text-[10px] text-gray-6">
+              Context length ({context?.length}) does not match feature count ({featureCount}).
+            </output>
+          )}
+          {showContext && !contextMismatch && contextInvalid && (
+            <output className="block mt-[5px] ml-[8px] text-[10px] text-gray-6">
+              Context contains invalid values.
+            </output>
+          )}
+          {showContext && contextValid && (
             <div
               data-testid="context-values"
               className="mt-[5px] ml-[8px] space-y-[3px] text-[10px] font-mono text-gray-6"
             >
-              {step.context?.map((val, i) => (
+              {context.map((val, i) => (
                 <div key={i}>
                   <span className="font-medium">{featureLabels[i] || featureNames[i]}:</span>{" "}
                   {val.toFixed(2)}

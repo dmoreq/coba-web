@@ -1,8 +1,10 @@
 import { UCBDisplay } from "@/components/estimates/UCBDisplay";
+import { AlgorithmFitChip } from "@/components/playground/AlgorithmFitChip";
 import { ContextPanel } from "@/components/playground/ContextPanel";
 import { EnvPanel } from "@/components/playground/EnvPanel";
 import { ScenarioInfoBar } from "@/components/playground/ScenarioInfoBar";
 import { ScenarioPicker } from "@/components/playground/ScenarioPicker";
+import { SegmentChart } from "@/components/playground/SegmentChart";
 import { StepFeed } from "@/components/playground/StepFeed";
 import { WhyPanel } from "@/components/playground/WhyPanel";
 import { api } from "@/lib/api";
@@ -113,7 +115,44 @@ describe("ContextPanel", () => {
     const state = makeState();
     state.history[0].context = [0.5];
     render(<ContextPanel simState={state} contextSegment={null} />);
-    expect(screen.getByRole("status")).toHaveTextContent(/does not match feature count/i);
+    expect(screen.getByText(/does not match feature count/i)).toBeInTheDocument();
+  });
+
+  it("reports non-finite context values", () => {
+    const state = makeState();
+    state.history[0].context = [Number.NaN, -0.3];
+    render(<ContextPanel simState={state} contextSegment={null} />);
+    expect(screen.getByText(/invalid/i)).toBeInTheDocument();
+  });
+});
+
+describe("SegmentChart", () => {
+  const mockSegments = [
+    { name: "Mobile Active", weight: 0.35 },
+    { name: "Desktop Inactive", weight: 0.25 },
+  ];
+
+  it("renders all segments with proportions", () => {
+    render(<SegmentChart segments={mockSegments} currentSegment="Mobile Active" />);
+    expect(screen.getByText("Mobile Active")).toBeInTheDocument();
+    expect(screen.getByText("35%")).toBeInTheDocument();
+  });
+
+  it("highlights current segment", () => {
+    render(<SegmentChart segments={mockSegments} currentSegment="Mobile Active" />);
+    expect(screen.getByTestId("segment-Mobile-Active")).toHaveClass("ring-2");
+  });
+});
+
+describe("AlgorithmFitChip", () => {
+  it("shows good match when algorithm is recommended", () => {
+    render(<AlgorithmFitChip algorithm="linucb" recommendedAlgorithms={["linucb", "linucb_sw"]} />);
+    expect(screen.getByTestId("algorithm-fit-match")).toHaveTextContent(/good match/i);
+  });
+
+  it("suggests first recommended algorithm when mismatched", () => {
+    render(<AlgorithmFitChip algorithm="ucb1" recommendedAlgorithms={["linucb_sw", "linucb"]} />);
+    expect(screen.getByTestId("algorithm-fit-suggestion")).toHaveTextContent(/SW-LinUCB/i);
   });
 });
 
@@ -123,6 +162,16 @@ describe("EnvPanel", () => {
     expect(screen.getByText("10%")).toBeTruthy();
     expect(screen.getByText("90%")).toBeTruthy();
     expect(screen.getByText("best now")).toBeTruthy();
+  });
+
+  it("renders segment chart when population segments are present", () => {
+    const state = makeState();
+    state.populationSegments = [
+      { name: "Mobile Active", weight: 0.35 },
+      { name: "Desktop Inactive", weight: 0.25 },
+    ];
+    render(<EnvPanel simState={state} showGroundTruth={false} onToggle={vi.fn()} />);
+    expect(screen.getByTestId("segment-chart")).toBeInTheDocument();
   });
 });
 
@@ -170,6 +219,23 @@ describe("StepFeed", () => {
         algorithm="ucb1"
       />,
     );
+    expect(screen.queryByTestId("context-values")).not.toBeInTheDocument();
+  });
+
+  it("reports context length mismatch in expanded feed", () => {
+    const history = makeState("linucb").history;
+    history[0].context = [0.5];
+    render(
+      <StepFeed
+        history={history}
+        arms={arms}
+        t={8}
+        featureNames={["mobile_usage", "recency_days"]}
+        featureLabels={["Mobile Usage", "Recency"]}
+        algorithm="linucb"
+      />,
+    );
+    expect(screen.getByText(/does not match feature count/i)).toBeInTheDocument();
     expect(screen.queryByTestId("context-values")).not.toBeInTheDocument();
   });
 });

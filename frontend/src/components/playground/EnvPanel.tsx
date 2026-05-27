@@ -1,6 +1,7 @@
 "use client";
 
 import { ContextPanel } from "@/components/playground/ContextPanel";
+import { SegmentChart } from "@/components/playground/SegmentChart";
 import { TruthToggle } from "@/components/shared/TruthToggle";
 import { CONTEXTUAL_ALGORITHMS, getCurrentTrueProb, isBestArmRightNow } from "@/lib/constants";
 import type { SimState } from "@/lib/types";
@@ -30,6 +31,13 @@ function EnvPanelComponent({ simState, showGroundTruth, onToggle }: EnvPanelProp
         <div className="mb-sm">
           <ContextPanel simState={simState} contextSegment={lastStep?.contextSegment ?? null} />
         </div>
+      )}
+
+      {(simState.populationSegments?.length ?? 0) > 0 && (
+        <SegmentChart
+          segments={simState.populationSegments ?? []}
+          currentSegment={lastStep?.contextSegment ?? null}
+        />
       )}
 
       {arms.map((arm, i) => {

@@ -51,6 +51,14 @@ function ContextPanelComponent({ simState, contextSegment }: ContextPanelProps) 
     );
   }
 
+  if (context.some((v) => !Number.isFinite(v))) {
+    return (
+      <output className="block text-[11px] text-gray-6">
+        Context contains invalid (non-finite) values.
+      </output>
+    );
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-[10px]">
