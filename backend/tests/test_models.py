@@ -17,7 +17,14 @@ from coba_server.models.simulation import (
 
 def _minimal_scenario_features(n: int) -> list[ContextFeature]:
     return [
-        ContextFeature(name=f"f{i}", label=f"F{i}", description="test feature") for i in range(n)
+        ContextFeature(
+            name=f"f{i}",
+            label=f"F{i}",
+            description="test feature",
+            low_label="low",
+            high_label="high",
+        )
+        for i in range(n)
     ]
 
 

@@ -90,6 +90,14 @@ def _cap_score(raw: float) -> float:
     return 99.0 if raw == float("inf") else float(raw)
 
 
+def _lin_meta_for_features(n_features: int) -> LinMeta:
+    """Identity A and zero b for n-dimensional LinUCB shadow state."""
+    return LinMeta(
+        A=[[1.0 if i == j else 0.0 for j in range(n_features)] for i in range(n_features)],
+        b=[0.0] * n_features,
+    )
+
+
 def _coerce_hyperparam(name: str, value: float) -> Any:
     if name in INT_HYPERPARAMS:
         return int(value)
@@ -180,7 +188,7 @@ class CobaLibraryAdapter(CobaAdapter):
         self._arm_labels[handle] = arm_labels
         self._arm_configs[handle] = arm_configs
         self._arm_states[handle] = [ArmState() for _ in arm_configs]
-        self._lin_metas[handle] = [LinMeta() for _ in arm_configs]
+        self._lin_metas[handle] = [_lin_meta_for_features(n_features) for _ in arm_configs]
         self._algorithms[handle] = algorithm
         self._alphas[handle] = alpha
         self._epsilons[handle] = epsilon
@@ -208,6 +216,9 @@ class CobaLibraryAdapter(CobaAdapter):
             feature_units=[f.unit for f in scenario.features],
             feature_mins=[f.min_val for f in scenario.features],
             feature_maxs=[f.max_val for f in scenario.features],
+            feature_low_labels=[f.low_label for f in scenario.features],
+            feature_high_labels=[f.high_label for f in scenario.features],
+            history_window=MAX_HISTORY_LENGTH,
             t=self._ts[handle],
             history=list(self._histories[handle]),
             regret_history=list(self._regret_histories[handle]),
@@ -391,13 +402,11 @@ class CobaLibraryAdapter(CobaAdapter):
         # Update shadow lin_meta for existing frontend LinUCB visualisation.
         if algorithm in {"linucb", "lints", "linucb_sw", "linucb_hybrid"}:
             x = context.tolist()
+            n = len(x)
             m = lin_meta[chosen_idx]
             lin_meta[chosen_idx] = LinMeta(
-                A=[
-                    [m.A[0][0] + x[0] * x[0], m.A[0][1] + x[0] * x[1]],
-                    [m.A[1][0] + x[1] * x[0], m.A[1][1] + x[1] * x[1]],
-                ],
-                b=[m.b[0] + outcome * x[0], m.b[1] + outcome * x[1]],
+                A=[[m.A[i][j] + x[i] * x[j] for j in range(n)] for i in range(n)],
+                b=[m.b[i] + outcome * x[i] for i in range(n)],
             )
 
         record = StepRecord(

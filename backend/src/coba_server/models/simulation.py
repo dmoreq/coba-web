@@ -85,6 +85,9 @@ class SimState(BaseModel):
     feature_units: list[str | None] = Field(default_factory=list)
     feature_mins: list[float] = Field(default_factory=list)
     feature_maxs: list[float] = Field(default_factory=list)
+    feature_low_labels: list[str] = Field(default_factory=list)
+    feature_high_labels: list[str] = Field(default_factory=list)
+    history_window: int = 150
     history: list[StepRecord] = Field(default_factory=list)
     regret_history: list[float] = Field(default_factory=list)
 

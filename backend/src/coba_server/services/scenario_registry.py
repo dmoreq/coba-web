@@ -50,6 +50,8 @@ NOTIFICATION_CHANNELS = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="desktop-only",
+            high_label="mobile-only",
         ),
         ContextFeature(
             name="recency_days",
@@ -58,6 +60,8 @@ NOTIFICATION_CHANNELS = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit="days",
+            low_label="today",
+            high_label="30+ days ago",
         ),
     ],
     arms=_with_palette(
@@ -143,6 +147,8 @@ NEWS_FEED = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="passive",
+            high_label="power reader",
         ),
         ContextFeature(
             name="time_of_day",
@@ -151,6 +157,8 @@ NEWS_FEED = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="midnight",
+            high_label="noon",
         ),
     ],
     arms=_with_palette(
@@ -237,6 +245,8 @@ PRODUCT_RECOMMENDATIONS = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="price-insensitive",
+            high_label="highly sensitive",
         ),
         ContextFeature(
             name="cart_value",
@@ -245,6 +255,8 @@ PRODUCT_RECOMMENDATIONS = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="empty cart",
+            high_label="high-value",
         ),
     ],
     arms=_with_palette(
@@ -330,6 +342,8 @@ CONTENT_FORMAT = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="quick browse",
+            high_label="deep dive",
         ),
         ContextFeature(
             name="bandwidth",
@@ -338,6 +352,8 @@ CONTENT_FORMAT = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="slow mobile",
+            high_label="fast broadband",
         ),
     ],
     arms=_with_palette(
@@ -453,6 +469,8 @@ AD_CREATIVE_SELECTION = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="fresh",
+            high_label="saturated",
         ),
         ContextFeature(
             name="creative_relevance",
@@ -464,6 +482,8 @@ AD_CREATIVE_SELECTION = ContextScenario(
             min_val=-1.0,
             max_val=1.0,
             unit=None,
+            low_label="unrelated",
+            high_label="highly relevant",
         ),
     ],
     arms=_with_palette(

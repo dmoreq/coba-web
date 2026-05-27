@@ -16,6 +16,8 @@ class ContextFeature(BaseModel):
     min_val: float = Field(default=-1.0, description="Minimum normalised value")
     max_val: float = Field(default=1.0, description="Maximum normalised value")
     unit: str | None = Field(default=None, description="Display unit, e.g. '%', 'days'")
+    low_label: str = Field(..., description="Semantic label at min_val, e.g. 'desktop-only'")
+    high_label: str = Field(..., description="Semantic label at max_val, e.g. 'mobile-only'")
 
     def __hash__(self) -> int:
         return hash(self.name)

@@ -1,7 +1,10 @@
 """Integration tests for CobaLibraryAdapter — exercises the real coba library."""
 
+from unittest.mock import patch
+
 import pytest
 
+from coba_server.models.context import ContextFeature, ContextScenario, RewardProfile
 from coba_server.models.simulation import ArmConfig
 from coba_server.services.coba_adapter_real import CobaLibraryAdapter
 
@@ -338,3 +341,72 @@ class TestSimStateFeatureMetadata:
         assert state.feature_mins == [-1.0, -1.0]
         assert state.feature_maxs == [1.0, 1.0]
         assert len(state.feature_units) == 2
+
+    def test_get_state_includes_history_window(self, adapter):
+        from coba_server.services.coba_adapter_real import MAX_HISTORY_LENGTH
+
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "notification_channels")
+        state = adapter.get_state(h)
+        assert state.history_window == MAX_HISTORY_LENGTH
+        assert len(state.history) <= state.history_window
+
+
+def _three_feature_test_scenario() -> ContextScenario:
+    """Minimal 3-feature scenario (test-only; uses A00 16-feature cap)."""
+    n = 3
+    return ContextScenario(
+        id="test_three_features",
+        label="Test Three Features",
+        description="Minimal scenario for lin_meta dimension tests",
+        domain="Test",
+        features=[
+            ContextFeature(
+                name=f"f{i}",
+                label=f"F{i}",
+                description="test feature",
+                low_label="low",
+                high_label="high",
+            )
+            for i in range(n)
+        ],
+        arms=[
+            {"id": "a", "label": "A", "true_prob": 0.5},
+            {"id": "b", "label": "B", "true_prob": 0.5},
+        ],
+        reward_profiles=[
+            RewardProfile(weights=[0.0] * n, bias=0.0),
+            RewardProfile(weights=[0.0] * n, bias=0.0),
+        ],
+    )
+
+
+class TestLinMetaNFeatures:
+    def test_lin_meta_update_supports_three_features(self, adapter):
+        scenario = _three_feature_test_scenario()
+        with patch(
+            "coba_server.services.coba_adapter_real.get_scenario",
+            return_value=scenario,
+        ):
+            h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "test_three_features")
+
+        state = adapter.get_state(h)
+        for m in state.lin_meta:
+            assert len(m.b) == 3
+            assert len(m.A) == 3
+            assert all(len(row) == 3 for row in m.A)
+
+        adapter.step(h)
+        state = adapter.get_state(h)
+        for m in state.lin_meta:
+            assert len(m.b) == 3
+            assert len(m.A) == 3
+            assert all(len(row) == 3 for row in m.A)
+
+        chosen_idx = state.history[-1].chosen_idx
+        assert len(state.lin_meta[chosen_idx].b) == 3
+
+    def test_get_state_includes_feature_low_and_high_labels(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "notification_channels")
+        state = adapter.get_state(h)
+        assert state.feature_low_labels == ["desktop-only", "today"]
+        assert state.feature_high_labels == ["mobile-only", "30+ days ago"]

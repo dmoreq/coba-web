@@ -27,6 +27,8 @@ class TestContextFeature:
             name="mobile_usage",
             label="Mobile Usage",
             description="Mobile vs desktop",
+            low_label="desktop-only",
+            high_label="mobile-only",
         )
         assert f.min_val == -1.0
         assert f.max_val == 1.0
@@ -40,12 +42,18 @@ class TestContextFeature:
             min_val=-1.0,
             max_val=1.0,
             unit="%",
+            low_label="low",
+            high_label="high",
         )
         assert f.unit == "%"
 
     def test_feature_hashable(self):
-        f1 = ContextFeature(name="mobile", label="Mobile", description="Test")
-        f2 = ContextFeature(name="mobile", label="Mobile", description="Test")
+        f1 = ContextFeature(
+            name="mobile", label="Mobile", description="Test", low_label="low", high_label="high"
+        )
+        f2 = ContextFeature(
+            name="mobile", label="Mobile", description="Test", low_label="low", high_label="high"
+        )
         # Both should hash to the same value
         assert hash(f1) == hash(f2)
 
@@ -170,8 +178,20 @@ class TestContextScenario:
                 description="Test scenario",
                 domain="Test",
                 features=[
-                    ContextFeature(name="f1", label="F1", description="Feature 1"),
-                    ContextFeature(name="f2", label="F2", description="Feature 2"),
+                    ContextFeature(
+                        name="f1",
+                        label="F1",
+                        description="Feature 1",
+                        low_label="low",
+                        high_label="high",
+                    ),
+                    ContextFeature(
+                        name="f2",
+                        label="F2",
+                        description="Feature 2",
+                        low_label="low",
+                        high_label="high",
+                    ),
                 ],
                 arms=[
                     {"id": "a1", "label": "Arm 1", "true_prob": 0.5},
@@ -227,6 +247,20 @@ class TestScenarioRegistry:
     def test_validate_all_scenarios(self):
         """All scenarios in the registry must pass validation."""
         validate_all_scenarios()  # Should not raise
+
+    def test_notification_channels_features_have_semantic_labels(self):
+        scenario = get_scenario("notification_channels")
+        mobile = scenario.features[0]
+        assert mobile.low_label is not None
+        assert mobile.high_label is not None
+        assert "desktop" in mobile.low_label.lower()
+        assert "mobile" in mobile.high_label.lower()
+
+    def test_all_features_across_all_scenarios_have_labels(self):
+        for scenario_id, scenario in SCENARIO_REGISTRY.items():
+            for f in scenario.features:
+                assert f.low_label, f"{scenario_id}.{f.name} missing low_label"
+                assert f.high_label, f"{scenario_id}.{f.name} missing high_label"
 
     def test_each_scenario_validates(self):
         """Test validation of each scenario individually."""
