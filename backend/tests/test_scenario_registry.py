@@ -248,6 +248,45 @@ class TestScenarioRegistry:
         """All scenarios in the registry must pass validation."""
         validate_all_scenarios()  # Should not raise
 
+    def test_wraps_scenario_id_on_failure(self, monkeypatch):
+        arms, profiles = (
+            [
+                {"id": "a", "label": "A", "true_prob": 0.5},
+                {"id": "b", "label": "B", "true_prob": 0.5},
+            ],
+            [
+                RewardProfile(weights=[0.0, 0.0, 0.0], bias=0.0),
+                RewardProfile(weights=[0.0, 0.0, 0.0], bias=0.0),
+            ],
+        )
+        bad = ContextScenario(
+            id="bad_startup",
+            label="Bad",
+            description="d",
+            domain="Test",
+            features=[
+                ContextFeature(
+                    name="f0",
+                    label="F0",
+                    description="x",
+                    low_label="low",
+                    high_label="high",
+                ),
+                ContextFeature(
+                    name="f1",
+                    label="F1",
+                    description="y",
+                    low_label="low",
+                    high_label="high",
+                ),
+            ],
+            arms=arms,
+            reward_profiles=profiles,
+        )
+        monkeypatch.setitem(SCENARIO_REGISTRY, "bad_startup", bad)
+        with pytest.raises(ValueError, match="Scenario 'bad_startup' validation failed"):
+            validate_all_scenarios()
+
     def test_notification_channels_features_have_semantic_labels(self):
         scenario = get_scenario("notification_channels")
         mobile = scenario.features[0]

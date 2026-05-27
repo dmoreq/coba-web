@@ -139,6 +139,21 @@ class TestAlgorithms:
         assert len(data) >= 16 and "ucb1" in ids and "random_forest_ts" in ids
 
 
+UNKNOWN_SIM_ID = "00000000-0000-0000-0000-000000000000"
+
+
+class TestSimulateNotFound:
+    def test_run_unknown_simulation_returns_404(self, client):
+        r = client.post(f"/api/simulate/{UNKNOWN_SIM_ID}/run", json={"steps": 5})
+        assert r.status_code == 404
+        assert r.json()["detail"] == "Simulation not found"
+
+    def test_coba_state_unknown_simulation_returns_404(self, client):
+        r = client.get(f"/api/simulate/{UNKNOWN_SIM_ID}/coba-state")
+        assert r.status_code == 404
+        assert r.json()["detail"] == "Simulation not found"
+
+
 class TestCobaDiagnostics:
     def test_returns_coba_state_for_simulation(self, client):
         sid = client.post("/api/simulate", json={"arms": _arms_2(), "algorithm": "linucb"}).json()[
