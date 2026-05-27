@@ -33,6 +33,8 @@ export default function ComparePage() {
   const [ids, setIds] = useState<{ a: string; b: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isStepping, setIsStepping] = useState(false);
+  const [isRecreating, setIsRecreating] = useState(true);
   const [speed, setSpeed] = useState(0.5);
 
   // Use a ref to avoid the initSims ← setIds → initSims re-creates → effect re-fires loop
@@ -42,6 +44,7 @@ export default function ComparePage() {
   const initSims = useCallback(
     async (algoAval: AlgorithmId, algoBval: AlgorithmId) => {
       setError(null);
+      setIsRecreating(true);
       try {
         // Clean up old simulations via ref to avoid dependency on ids
         if (idsRef.current) {
@@ -81,6 +84,8 @@ export default function ComparePage() {
         });
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to initialize");
+      } finally {
+        setIsRecreating(false);
       }
     },
     [], // stable — no dependencies that change during the lifecycle
@@ -99,7 +104,8 @@ export default function ComparePage() {
   }, [initSims, algoA, algoB]);
 
   const handleStep = useCallback(async () => {
-    if (!ids || !simA || !simB) return;
+    if (!ids || !simA || !simB || isStepping || isRecreating) return;
+    setIsStepping(true);
     try {
       const [stepA, stepB] = await Promise.all([api.step(ids.a), api.step(ids.b)]);
       // Reconstruct sim states from step responses without additional fetches
@@ -121,19 +127,27 @@ export default function ComparePage() {
       setSimB(updatedSimB);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Step failed");
+      setIsRunning(false);
+    } finally {
+      setIsStepping(false);
     }
-  }, [ids, simA, simB]);
+  }, [ids, simA, simB, isStepping, isRecreating]);
 
   const handleReset = useCallback(() => {
+    if (isStepping || isRecreating) return;
     setIsRunning(false);
     initSims(algoA, algoB);
-  }, [algoA, algoB, initSims]);
+  }, [algoA, algoB, initSims, isStepping, isRecreating]);
 
-  const handleAlgoChange = useCallback((side: "A" | "B", algo: AlgorithmId) => {
-    if (side === "A") setAlgoA(algo);
-    else setAlgoB(algo);
-    setIsRunning(false);
-  }, []);
+  const handleAlgoChange = useCallback(
+    (side: "A" | "B", algo: AlgorithmId) => {
+      if (isStepping || isRecreating) return;
+      if (side === "A") setAlgoA(algo);
+      else setAlgoB(algo);
+      setIsRunning(false);
+    },
+    [isStepping, isRecreating],
+  );
 
   // Use the same simulation runner pattern as Playground to avoid race conditions
   useSimulationRunner(isRunning, speed, handleStep);
@@ -162,19 +176,32 @@ export default function ComparePage() {
         <div className="flex-1" />
         <PlaybackControls
           isRunning={isRunning}
+          isStepping={isStepping}
           onStep={handleStep}
-          onPlayPause={() => setIsRunning((r) => !r)}
+          onPlayPause={() => {
+            if (!isRecreating) setIsRunning((r) => !r);
+          }}
         />
         <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={setSpeed} />
         <button
           type="button"
           onClick={handleReset}
-          className="px-[9px] py-[5px] rounded-xs border border-gray-3 cursor-pointer text-[11px] bg-white text-gray-6 font-sans"
+          disabled={isStepping || isRecreating}
+          className="px-[9px] py-[5px] rounded-xs border border-gray-3 cursor-pointer text-[11px] bg-white text-gray-6 font-sans disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Reset
         </button>
         <TruthToggle revealed={showGT} onToggle={() => setShowGT((g) => !g)} />
       </div>
+
+      {isRecreating && (
+        <div
+          className="text-center text-gray-5 text-[12px] py-2 bg-white border-b border-gray-3"
+          data-testid="compare-recreating-banner"
+        >
+          Recreating simulations…
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-lg bg-surface-page flex flex-col gap-3">
         <div className="flex gap-3">
@@ -188,6 +215,7 @@ export default function ComparePage() {
                 <AlgorithmSelector
                   selected={currentAlgo}
                   onChange={(algo) => handleAlgoChange(side, algo)}
+                  disabled={isStepping || isRecreating}
                 />
               </div>
             );

@@ -16,10 +16,16 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
 
+  const prefetchRoute = (path: string) => {
+    if (path !== pathname) {
+      router.prefetch?.(path);
+    }
+  };
+
   return (
     <header className="w-full h-[52px] flex-shrink-0 bg-white border-b border-gray-2 flex items-center px-xl gap-1 shadow-sm">
-      {/* Logo */}
       <button
+        type="button"
         onClick={() => router.push("/")}
         className="flex items-center gap-[10px] mr-xl flex-shrink-0 cursor-pointer bg-transparent border-none"
       >
@@ -27,16 +33,17 @@ export function Header() {
         <span className="text-[11px] text-gray-5 tracking-[0.02em] ml-xs">Bandit Simulator</span>
       </button>
 
-      {/* Divider */}
       <div className="w-px h-5 bg-gray-2 mr-sm flex-shrink-0" />
 
-      {/* Nav items */}
       {HEADER_ITEMS.map((item) => {
         const isActive = pathname === item.path;
         return (
           <button
             key={item.path}
+            type="button"
             onClick={() => router.push(item.path)}
+            onMouseEnter={() => prefetchRoute(item.path)}
+            onFocus={() => prefetchRoute(item.path)}
             className={`
               px-3 py-[5px] rounded-sm border-none cursor-pointer text-[13px]
               transition-all duration-fast flex-shrink-0 font-sans

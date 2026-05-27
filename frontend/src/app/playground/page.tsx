@@ -29,7 +29,8 @@ export default function PlaygroundPage() {
   const simState = useSimulationStore((s) => s.simState);
   const isRunning = useSimulationStore((s) => s.isRunning);
   const speed = useSimulationStore((s) => s.speed);
-  const isLoading = useSimulationStore((s) => s.isLoading);
+  const isStepping = useSimulationStore((s) => s.isStepping);
+  const isRecreating = useSimulationStore((s) => s.isRecreating);
   const error = useSimulationStore((s) => s.error);
   const storeStep = useSimulationStore((s) => s.step);
   const storePlay = useSimulationStore((s) => s.play);
@@ -98,7 +99,8 @@ export default function PlaygroundPage() {
         onSpeedChange={storeSetSpeed}
         scenarioId={scenarioId}
         onScenarioChange={(newScenarioId) => switchScenario(newScenarioId)}
-        isLoading={isLoading}
+        isStepping={isStepping}
+        isRecreating={isRecreating}
       />
       <ScenarioInfoBar scenario={selectedScenario ?? null} currentAlgorithm={display.algorithm} />
       <div className="flex-1 flex overflow-hidden">
@@ -111,8 +113,13 @@ export default function PlaygroundPage() {
           algorithm={display.algorithm}
         />
         <div className="flex-1 overflow-y-auto p-lg bg-surface-page flex flex-col gap-[10px]">
-          {isLoading && (
-            <div className="text-center text-gray-5 text-[12px] py-4">Running simulation...</div>
+          {isRecreating && (
+            <div
+              className="text-center text-gray-5 text-[12px] py-2"
+              data-testid="playground-recreating-banner"
+            >
+              Recreating simulation…
+            </div>
           )}
           <Panel>
             <EnvPanel

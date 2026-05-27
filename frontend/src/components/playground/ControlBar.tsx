@@ -19,7 +19,8 @@ interface ControlBarProps {
   onSpeedChange: (v: number) => void;
   scenarioId?: string;
   onScenarioChange?: (scenarioId: string) => Promise<void>;
-  isLoading?: boolean;
+  isStepping?: boolean;
+  isRecreating?: boolean;
 }
 
 export function ControlBar({
@@ -34,7 +35,8 @@ export function ControlBar({
   onSpeedChange,
   scenarioId = "notification_channels",
   onScenarioChange,
-  isLoading = false,
+  isStepping = false,
+  isRecreating = false,
 }: ControlBarProps) {
   return (
     <div className="flex items-center gap-[10px] p-[9px_16px] bg-white border-b border-gray-3 flex-shrink-0 flex-wrap font-sans">
@@ -42,10 +44,14 @@ export function ControlBar({
         <ScenarioPicker
           selectedScenarioId={scenarioId}
           onScenarioChange={onScenarioChange}
-          isLoading={isLoading}
+          isLoading={isRecreating}
         />
       )}
-      <AlgorithmSelector selected={simState.algorithm} onChange={(a) => onReset(a)} />
+      <AlgorithmSelector
+        selected={simState.algorithm}
+        onChange={(a) => onReset(a)}
+        disabled={isRecreating}
+      />
       <label className="flex items-center gap-[6px] text-[11px] text-gray-6">
         <span className="whitespace-nowrap">Seed</span>
         <input
@@ -59,7 +65,12 @@ export function ControlBar({
         <span className="text-[9px] text-gray-5 hidden sm:inline">applies on reset</span>
       </label>
       <div className="flex-1 min-w-[8px]" />
-      <PlaybackControls isRunning={isRunning} onStep={onStep} onPlayPause={onPlayPause} />
+      <PlaybackControls
+        isRunning={isRunning}
+        isStepping={isStepping}
+        onStep={onStep}
+        onPlayPause={onPlayPause}
+      />
       <SpeedSelector speeds={[0.5, 1, 2, 5, 10]} value={speed} onChange={onSpeedChange} />
       <div className="flex items-center gap-sm">
         <span
@@ -69,8 +80,10 @@ export function ControlBar({
           t={simState.t}
         </span>
         <button
+          type="button"
           onClick={() => onReset(undefined)}
-          className="px-[9px] py-[5px] rounded-xs border border-gray-3 cursor-pointer text-[11px] bg-white text-gray-6 font-sans transition-colors duration-fast hover:bg-gray-0"
+          disabled={isRecreating || isStepping}
+          className="px-[9px] py-[5px] rounded-xs border border-gray-3 cursor-pointer text-[11px] bg-white text-gray-6 font-sans transition-colors duration-fast hover:bg-gray-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Reset
         </button>

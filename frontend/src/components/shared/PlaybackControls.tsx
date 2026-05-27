@@ -2,22 +2,33 @@
 
 interface PlaybackControlsProps {
   isRunning: boolean;
+  isStepping?: boolean;
   onStep: () => void;
   onPlayPause: () => void;
 }
 
-export function PlaybackControls({ isRunning, onStep, onPlayPause }: PlaybackControlsProps) {
+export function PlaybackControls({
+  isRunning,
+  isStepping = false,
+  onStep,
+  onPlayPause,
+}: PlaybackControlsProps) {
+  const stepDisabled = isRunning || isStepping;
+
   return (
     <div className="flex gap-[6px] items-center">
       <button
+        type="button"
         onClick={onStep}
-        disabled={isRunning}
-        className="px-3 py-[6px] rounded-xs border border-gray-3 cursor-pointer text-[12px] bg-white text-gray-7 font-sans transition-opacity duration-fast"
-        style={{ opacity: isRunning ? 0.45 : 1 }}
+        disabled={stepDisabled}
+        aria-busy={isStepping ? "true" : "false"}
+        data-testid="playback-step-button"
+        className="px-3 py-[6px] rounded-xs border border-gray-3 cursor-pointer text-[12px] bg-white text-gray-7 font-sans transition-opacity duration-fast disabled:opacity-50 disabled:cursor-not-allowed"
       >
         Step &rarr;
       </button>
       <button
+        type="button"
         onClick={onPlayPause}
         className="px-4 py-[6px] rounded-xs border-none cursor-pointer text-[12px] font-semibold text-white font-sans transition-colors duration-fast"
         style={{ background: isRunning ? "#fa5252" : "#228be6" }}

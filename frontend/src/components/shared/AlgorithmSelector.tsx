@@ -6,9 +6,14 @@ import type { AlgorithmId } from "@/lib/types";
 interface AlgorithmSelectorProps {
   selected: AlgorithmId;
   onChange: (algo: AlgorithmId) => void;
+  disabled?: boolean;
 }
 
-export function AlgorithmSelector({ selected, onChange }: AlgorithmSelectorProps) {
+export function AlgorithmSelector({
+  selected,
+  onChange,
+  disabled = false,
+}: AlgorithmSelectorProps) {
   const algos = Object.keys(ALGO_META) as AlgorithmId[];
 
   return (
@@ -22,8 +27,10 @@ export function AlgorithmSelector({ selected, onChange }: AlgorithmSelectorProps
         return (
           <button
             key={a}
+            type="button"
+            disabled={disabled}
             onClick={() => onChange(a)}
-            className="px-[10px] py-[5px] rounded-xs border-none cursor-pointer text-[12px] font-sans transition-all duration-fast"
+            className="px-[10px] py-[5px] rounded-xs border-none cursor-pointer text-[12px] font-sans transition-all duration-fast disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               fontWeight: isActive ? 600 : 400,
               background: isActive ? m.color : "#f1f3f5",
