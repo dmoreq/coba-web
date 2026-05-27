@@ -225,14 +225,11 @@ export default function ResultsPage() {
             <div className="space-y-[12px]">
               {Object.entries(segmentBreakdown).map(([segmentName, data]) => {
                 const segmentRate = data.count > 0 ? data.rewards / data.count : 0;
-                const bestArmRate =
-                  data.count > 0 ? data.bestArmPulls / data.count : 0;
+                const bestArmRate = data.count > 0 ? data.bestArmPulls / data.count : 0;
                 return (
                   <div key={segmentName} className="border border-gray-2 rounded-sm p-[10px]">
                     <div className="flex items-center justify-between mb-[6px]">
-                      <span className="font-semibold text-gray-8 text-[12px]">
-                        {segmentName}
-                      </span>
+                      <span className="font-semibold text-gray-8 text-[12px]">{segmentName}</span>
                       <span className="text-[10px] text-gray-5">
                         n={data.count} ({((data.count / t) * 100).toFixed(0)}%)
                       </span>

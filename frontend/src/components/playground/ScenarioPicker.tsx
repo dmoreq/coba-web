@@ -72,14 +72,12 @@ function ScenarioPickerComponent({
                       <div className="font-semibold text-gray-8">
                         {scenario.label}
                         {isSelected && (
-                          <span className="ml-[6px] text-[9px] text-blue-6 font-bold">
-                            ✓
-                          </span>
+                          <span className="ml-[6px] text-[9px] text-blue-6 font-bold">✓</span>
                         )}
                       </div>
                       <div className="text-[10px] text-gray-5 mt-[2px]">
-                        {scenario.domain} · {scenario.armCount} arms ·{" "}
-                        {scenario.featureCount} features
+                        {scenario.domain} · {scenario.armCount} arms · {scenario.featureCount}{" "}
+                        features
                         {scenario.hasDrift && " · drift"}
                       </div>
                     </div>

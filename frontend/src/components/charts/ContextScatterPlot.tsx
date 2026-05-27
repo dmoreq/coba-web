@@ -35,10 +35,10 @@ function ContextScatterPlotComponent({
 
   // Find feature ranges from history
   const ranges = useMemo(() => {
-    let xMin = Infinity,
-      xMax = -Infinity,
-      yMin = Infinity,
-      yMax = -Infinity;
+    let xMin = Number.POSITIVE_INFINITY;
+    let xMax = Number.NEGATIVE_INFINITY;
+    let yMin = Number.POSITIVE_INFINITY;
+    let yMax = Number.NEGATIVE_INFINITY;
 
     for (const step of history) {
       if (step.context && step.context.length === 2) {
@@ -82,16 +82,27 @@ function ContextScatterPlotComponent({
     for (const step of history) {
       if (step.context && step.context.length === 2) {
         const armIdx = step.chosenIdx;
+        const xRatio = (step.context[0] - ranges.xMin) / (ranges.xMax - ranges.xMin);
+        const yRatio = (ranges.yMax - step.context[1]) / (ranges.yMax - ranges.yMin);
         groups[armIdx].push({
-          x: xToPixel(step.context[0]),
-          y: yToPixel(step.context[1]),
+          x: padding + xRatio * chartWidth,
+          y: padding + yRatio * chartHeight,
           step: step.t,
         });
       }
     }
 
     return groups;
-  }, [history, xToPixel, yToPixel]);
+  }, [
+    arms.length,
+    chartHeight,
+    chartWidth,
+    history,
+    ranges.xMax,
+    ranges.xMin,
+    ranges.yMax,
+    ranges.yMin,
+  ]);
 
   // Format axis labels
   const xAxisLabel = featureLabels[0] || featureNames[0];
@@ -114,14 +125,35 @@ function ContextScatterPlotComponent({
           const y = padding + frac * chartHeight;
           return (
             <g key={`grid-${frac}`}>
-              <line x1={x} y1={padding} x2={x} y2={padding + chartHeight} stroke="#e9ecef" strokeWidth="1" />
-              <line x1={padding} y1={y} x2={padding + chartWidth} y2={y} stroke="#e9ecef" strokeWidth="1" />
+              <line
+                x1={x}
+                y1={padding}
+                x2={x}
+                y2={padding + chartHeight}
+                stroke="#e9ecef"
+                strokeWidth="1"
+              />
+              <line
+                x1={padding}
+                y1={y}
+                x2={padding + chartWidth}
+                y2={y}
+                stroke="#e9ecef"
+                strokeWidth="1"
+              />
             </g>
           );
         })}
 
         {/* Axes */}
-        <line x1={padding} y1={padding} x2={padding} y2={padding + chartHeight} stroke="#333" strokeWidth="2" />
+        <line
+          x1={padding}
+          y1={padding}
+          x2={padding}
+          y2={padding + chartHeight}
+          stroke="#333"
+          strokeWidth="2"
+        />
         <line
           x1={padding}
           y1={padding + chartHeight}
@@ -177,7 +209,13 @@ function ContextScatterPlotComponent({
         ))}
 
         {/* Axis tick labels */}
-        <text x={padding - 5} y={padding + chartHeight + 20} textAnchor="end" fontSize="9" fill="#666">
+        <text
+          x={padding - 5}
+          y={padding + chartHeight + 20}
+          textAnchor="end"
+          fontSize="9"
+          fill="#666"
+        >
           {xMin}
         </text>
         <text x={padding + chartWidth + 5} y={padding + chartHeight + 20} fontSize="9" fill="#666">
@@ -186,7 +224,13 @@ function ContextScatterPlotComponent({
         <text x={padding - 8} y={padding + 3} textAnchor="end" fontSize="9" fill="#666">
           {yMax}
         </text>
-        <text x={padding - 8} y={padding + chartHeight + 3} textAnchor="end" fontSize="9" fill="#666">
+        <text
+          x={padding - 8}
+          y={padding + chartHeight + 3}
+          textAnchor="end"
+          fontSize="9"
+          fill="#666"
+        >
           {yMin}
         </text>
       </svg>
