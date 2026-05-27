@@ -214,7 +214,16 @@ export default function ComparePage() {
                       key={s.label}
                       className="flex-1 bg-white border border-gray-3 rounded-sm p-[8px_10px]"
                     >
-                      <div className="text-lg font-bold text-gray-9 tabular-nums">{s.val}</div>
+                      <div
+                        className="text-lg font-bold text-gray-9 tabular-nums"
+                        {...(s.label === "Steps"
+                          ? {
+                              "data-testid": i === 0 ? "compare-steps-a" : "compare-steps-b",
+                            }
+                          : {})}
+                      >
+                        {s.val}
+                      </div>
                       <div className="text-[11px] text-gray-6 mt-[2px]">{s.label}</div>
                     </div>
                   ))}

@@ -2,28 +2,53 @@
 
 import { api } from "@/lib/api";
 import type { ScenarioInfo } from "@/lib/types";
-import { memo, useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 
 function ScenarioShowcaseComponent() {
   const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadScenarios = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await api.getScenarios();
+      setScenarios(list);
+    } catch (e) {
+      console.error("Failed to load scenarios:", e);
+      setError("Could not load scenarios");
+      setScenarios([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    const loadScenarios = async () => {
-      try {
-        const list = await api.getScenarios();
-        setScenarios(list);
-      } catch (e) {
-        console.error("Failed to load scenarios:", e);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadScenarios();
-  }, []);
+    void loadScenarios();
+  }, [loadScenarios]);
 
   if (loading) {
     return <div className="text-center text-gray-5 py-lg">Loading scenarios...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="mb-lg text-center py-lg">
+        <h2 className="text-[24px] font-bold text-gray-9 mb-sm">Real-World Scenarios</h2>
+        <p className="text-[14px] text-red-6 mb-sm">Could not load scenarios</p>
+        <p className="text-[12px] text-gray-6 mb-md max-w-[400px] mx-auto">
+          {error ?? "No scenarios available. Check that the API is running and try again."}
+        </p>
+        <button
+          type="button"
+          onClick={() => loadScenarios()}
+          className="text-[13px] font-medium px-[14px] py-[8px] rounded-sm border border-gray-3 bg-white text-gray-7 cursor-pointer font-sans hover:bg-gray-0 transition-colors duration-base"
+        >
+          Retry
+        </button>
+      </div>
+    );
   }
 
   return (

@@ -128,7 +128,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        <div className="flex gap-[10px] flex-wrap mb-lg">
+        <div data-testid="results-summary" className="flex gap-[10px] flex-wrap mb-lg">
           <StatCard label="Total steps" value={t} />
           <StatCard label="Cumulative regret" value={cumRegret.toFixed(2)} color="#fa5252" />
           <StatCard

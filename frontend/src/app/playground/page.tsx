@@ -126,7 +126,10 @@ export default function PlaygroundPage() {
           </Panel>
           {display.history.length > 0 && <WhyPanel simState={display} />}
           {display.featureNames.length === 2 && (
-            <div className="bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+            <div
+              data-testid="chart-context"
+              className="bg-white border border-gray-3 rounded-md shadow-sm p-lg"
+            >
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                 Context Space
               </div>
@@ -145,7 +148,10 @@ export default function PlaygroundPage() {
             </div>
           )}
           <div className="flex gap-[10px]">
-            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+            <div
+              data-testid="chart-regret"
+              className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg"
+            >
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                 Cumulative Regret
               </div>
@@ -156,13 +162,19 @@ export default function PlaygroundPage() {
                 driftEndStep={selectedScenario?.driftEndStep ?? undefined}
               />
             </div>
-            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+            <div
+              data-testid="chart-rewards"
+              className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg"
+            >
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                 Cumulative Rewards
               </div>
               <CumRewardsChart history={display.history} height={180} />
             </div>
-            <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
+            <div
+              data-testid="chart-pulls"
+              className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg"
+            >
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                 Pull Distribution
               </div>

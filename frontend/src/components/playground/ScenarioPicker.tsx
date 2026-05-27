@@ -20,6 +20,15 @@ function ScenarioPickerComponent({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [isOpen]);
+
+  useEffect(() => {
     const loadScenarios = async () => {
       try {
         const list = await api.getScenarios();
@@ -46,6 +55,8 @@ function ScenarioPickerComponent({
   return (
     <div className="relative inline-block">
       <button
+        type="button"
+        data-testid="scenario-picker-trigger"
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
         className="flex items-center gap-[6px] px-[9px] py-[5px] rounded-xs border border-gray-3 cursor-pointer text-[11px] bg-white text-gray-7 font-sans transition-colors duration-fast hover:bg-gray-0 disabled:opacity-50"
@@ -55,7 +66,10 @@ function ScenarioPickerComponent({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-[2px] w-[240px] bg-white border border-gray-3 rounded-sm shadow-md z-50">
+        <div
+          data-testid="scenario-picker-menu"
+          className="absolute top-full left-0 mt-[2px] w-[240px] bg-white border border-gray-3 rounded-sm shadow-md z-50"
+        >
           <div className="max-h-[300px] overflow-y-auto">
             {scenarios.map((scenario) => {
               const isSelected = scenario.id === selectedScenarioId;
