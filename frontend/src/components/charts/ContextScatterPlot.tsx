@@ -8,6 +8,10 @@ interface ContextScatterPlotProps {
   arms: Arm[];
   featureNames: string[];
   featureLabels: string[];
+  featureMins?: number[];
+  featureMaxs?: number[];
+  totalSteps?: number;
+  historyWindow?: number;
   width?: number;
   height?: number;
 }
@@ -17,10 +21,13 @@ function ContextScatterPlotComponent({
   arms,
   featureNames,
   featureLabels,
+  featureMins,
+  featureMaxs,
+  totalSteps,
+  historyWindow,
   width = 320,
   height = 280,
 }: ContextScatterPlotProps) {
-  // Only works with exactly 2 features
   if (featureNames.length !== 2 || history.length === 0) {
     return (
       <div className="flex items-center justify-center text-[12px] text-gray-5">
@@ -33,57 +40,30 @@ function ContextScatterPlotComponent({
   const chartWidth = width - 2 * padding;
   const chartHeight = height - 2 * padding;
 
-  // Find feature ranges from history
-  const ranges = useMemo(() => {
-    let xMin = Number.POSITIVE_INFINITY;
-    let xMax = Number.NEGATIVE_INFINITY;
-    let yMin = Number.POSITIVE_INFINITY;
-    let yMax = Number.NEGATIVE_INFINITY;
+  const ranges = useMemo(
+    () => ({
+      xMin: featureMins?.[0] ?? -1,
+      xMax: featureMaxs?.[0] ?? 1,
+      yMin: featureMins?.[1] ?? -1,
+      yMax: featureMaxs?.[1] ?? 1,
+    }),
+    [featureMins, featureMaxs],
+  );
 
-    for (const step of history) {
-      if (step.context && step.context.length === 2) {
-        xMin = Math.min(xMin, step.context[0]);
-        xMax = Math.max(xMax, step.context[0]);
-        yMin = Math.min(yMin, step.context[1]);
-        yMax = Math.max(yMax, step.context[1]);
-      }
-    }
-
-    // Add some padding to ranges
-    const xPad = (xMax - xMin) * 0.1 || 0.5;
-    const yPad = (yMax - yMin) * 0.1 || 0.5;
-
-    return {
-      xMin: xMin - xPad,
-      xMax: xMax + xPad,
-      yMin: yMin - yPad,
-      yMax: yMax + yPad,
-    };
-  }, [history]);
-
-  // Map context value to pixel coordinate
-  const xToPixel = (x: number) => {
-    const ratio = (x - ranges.xMin) / (ranges.xMax - ranges.xMin);
-    return padding + ratio * chartWidth;
-  };
-
-  const yToPixel = (y: number) => {
-    const ratio = (ranges.yMax - y) / (ranges.yMax - ranges.yMin); // Flip Y
-    return padding + ratio * chartHeight;
-  };
-
-  // Group points by arm for rendering (so we can color them)
   const pointsByArm = useMemo(() => {
     const groups: Record<number, Array<{ x: number; y: number; step: number }>> = {};
     for (let i = 0; i < arms.length; i++) {
       groups[i] = [];
     }
 
+    const xSpan = ranges.xMax - ranges.xMin || 1;
+    const ySpan = ranges.yMax - ranges.yMin || 1;
+
     for (const step of history) {
       if (step.context && step.context.length === 2) {
         const armIdx = step.chosenIdx;
-        const xRatio = (step.context[0] - ranges.xMin) / (ranges.xMax - ranges.xMin);
-        const yRatio = (ranges.yMax - step.context[1]) / (ranges.yMax - ranges.yMin);
+        const xRatio = (step.context[0] - ranges.xMin) / xSpan;
+        const yRatio = (ranges.yMax - step.context[1]) / ySpan;
         groups[armIdx].push({
           x: padding + xRatio * chartWidth,
           y: padding + yRatio * chartHeight,
@@ -93,33 +73,26 @@ function ContextScatterPlotComponent({
     }
 
     return groups;
-  }, [
-    arms.length,
-    chartHeight,
-    chartWidth,
-    history,
-    ranges.xMax,
-    ranges.xMin,
-    ranges.yMax,
-    ranges.yMin,
-  ]);
+  }, [arms.length, chartHeight, chartWidth, history, ranges]);
 
-  // Format axis labels
   const xAxisLabel = featureLabels[0] || featureNames[0];
   const yAxisLabel = featureLabels[1] || featureNames[1];
 
-  const xMin = ranges.xMin.toFixed(2);
-  const xMax = ranges.xMax.toFixed(2);
-  const yMin = ranges.yMin.toFixed(2);
-  const yMax = ranges.yMax.toFixed(2);
+  const xMinLabel = ranges.xMin.toFixed(2);
+  const xMaxLabel = ranges.xMax.toFixed(2);
+  const yMinLabel = ranges.yMin.toFixed(2);
+  const yMaxLabel = ranges.yMax.toFixed(2);
+
+  const subtitle =
+    totalSteps != null && historyWindow != null
+      ? `Showing last ${historyWindow} steps (total: ${totalSteps})`
+      : `${history.filter((s) => s.context).length} contexts, recent points larger`;
 
   return (
     <div className="flex flex-col">
       <svg width={width} height={height} className="bg-white">
-        {/* Grid background */}
         <rect x={padding} y={padding} width={chartWidth} height={chartHeight} fill="#fafafa" />
 
-        {/* Grid lines */}
         {[0, 0.25, 0.5, 0.75, 1].map((frac) => {
           const x = padding + frac * chartWidth;
           const y = padding + frac * chartHeight;
@@ -145,7 +118,6 @@ function ContextScatterPlotComponent({
           );
         })}
 
-        {/* Axes */}
         <line
           x1={padding}
           y1={padding}
@@ -163,7 +135,6 @@ function ContextScatterPlotComponent({
           strokeWidth="2"
         />
 
-        {/* Axis labels */}
         <text
           x={padding + chartWidth / 2}
           y={height - 5}
@@ -186,7 +157,6 @@ function ContextScatterPlotComponent({
           {yAxisLabel}
         </text>
 
-        {/* Data points by arm */}
         {arms.map((arm, armIdx) => (
           <g key={`arm-${armIdx}`}>
             {pointsByArm[armIdx].map((point, i) => {
@@ -208,21 +178,27 @@ function ContextScatterPlotComponent({
           </g>
         ))}
 
-        {/* Axis tick labels */}
         <text
           x={padding - 5}
           y={padding + chartHeight + 20}
           textAnchor="end"
           fontSize="9"
           fill="#666"
+          data-testid="x-axis-min"
         >
-          {xMin}
+          {xMinLabel}
         </text>
-        <text x={padding + chartWidth + 5} y={padding + chartHeight + 20} fontSize="9" fill="#666">
-          {xMax}
+        <text
+          x={padding + chartWidth + 5}
+          y={padding + chartHeight + 20}
+          fontSize="9"
+          fill="#666"
+          data-testid="x-axis-max"
+        >
+          {xMaxLabel}
         </text>
         <text x={padding - 8} y={padding + 3} textAnchor="end" fontSize="9" fill="#666">
-          {yMax}
+          {yMaxLabel}
         </text>
         <text
           x={padding - 8}
@@ -231,11 +207,10 @@ function ContextScatterPlotComponent({
           fontSize="9"
           fill="#666"
         >
-          {yMin}
+          {yMinLabel}
         </text>
       </svg>
 
-      {/* Legend */}
       <div className="flex gap-[12px] mt-[8px] flex-wrap text-[11px]">
         {arms.map((arm) => (
           <div key={arm.id} className="flex items-center gap-[5px]">
@@ -245,10 +220,7 @@ function ContextScatterPlotComponent({
         ))}
       </div>
 
-      {/* Info */}
-      <div className="text-[9px] text-gray-5 mt-[6px]">
-        {history.filter((s) => s.context).length} contexts, recent points larger
-      </div>
+      <div className="text-[9px] text-gray-5 mt-[6px]">{subtitle}</div>
     </div>
   );
 }
