@@ -5,10 +5,13 @@ import {
   CONTEXTUAL_ALGORITHMS,
   DEFAULT_HYPERPARAMS,
   HYPERPARAM_META,
+  HYPERPARAM_TOOLTIPS,
   createDefaultSimState,
   getEstimateLegend,
   getFormulaLabel,
+  getWhyText,
 } from "@/lib/constants";
+import type { SimState } from "@/lib/types";
 import { describe, expect, it } from "vitest";
 
 describe("ALGO_META", () => {
@@ -151,6 +154,99 @@ describe("createDefaultSimState", () => {
     const b = createDefaultSimState("linucb");
     expect(a.hyperparams).toEqual(b.hyperparams);
     expect(a.hyperparams).not.toBe(b.hyperparams);
+  });
+});
+
+function buildWhyState(
+  overrides: Partial<SimState> & { lastStep?: SimState["history"][0] },
+): SimState {
+  const lastStep = overrides.lastStep ?? {
+    t: 1,
+    chosenIdx: 0,
+    outcome: 1,
+    stepRegret: 0,
+    cumRegret: 0,
+    scores: [{ mean: 0.5, bonus: 0.2, score: 0.7, formula: "ucb" }],
+    context: null,
+    contextSegment: null,
+    wasRandom: false,
+    trueProb: 0.6,
+  };
+  return {
+    arms: [{ id: "a", label: "Push", trueProb: 0.5, color: "#228be6", lightColor: "#e7f5ff" }],
+    armStates: [{ n: 5, successes: 3, failures: 2 }],
+    linMeta: [],
+    algorithm: "ucb1",
+    alpha: 2,
+    epsilon: 0.1,
+    hyperparams: {},
+    history: [lastStep],
+    regretHistory: [0],
+    featureNames: [],
+    featureLabels: [],
+    t: 1,
+    ...overrides,
+  };
+}
+
+describe("getWhyText", () => {
+  it("includes segment name when contextual algorithm", () => {
+    const state = buildWhyState({
+      algorithm: "linucb",
+      lastStep: {
+        t: 1,
+        chosenIdx: 0,
+        outcome: 1,
+        stepRegret: 0,
+        cumRegret: 0,
+        scores: [{ mean: 0.5, bonus: 0.2, score: 0.7, formula: "lin" }],
+        context: [0.5, -0.3],
+        contextSegment: "Mobile Active",
+        wasRandom: false,
+        trueProb: 0.6,
+      },
+      featureLabels: ["Mobile Usage", "Recency"],
+    });
+    expect(getWhyText(state)).toContain("Mobile Active");
+  });
+
+  it("includes feature values for LinUCB", () => {
+    const state = buildWhyState({
+      algorithm: "linucb",
+      lastStep: {
+        t: 1,
+        chosenIdx: 0,
+        outcome: 1,
+        stepRegret: 0,
+        cumRegret: 0,
+        scores: [{ mean: 0.5, bonus: 0.2, score: 0.7, formula: "lin" }],
+        context: [0.82, -0.61],
+        contextSegment: null,
+        wasRandom: false,
+        trueProb: 0.6,
+      },
+      featureLabels: ["Mobile Usage", "Recency"],
+    });
+    expect(getWhyText(state)).toMatch(/Mobile Usage=0\.82/);
+  });
+
+  it("generic text for context-free UCB1 without feature=value pairs", () => {
+    const base = buildWhyState({});
+    const firstStep = base.history[0];
+    expect(firstStep).toBeDefined();
+    const state = buildWhyState({
+      algorithm: "ucb1",
+      lastStep: { ...firstStep, context: null, contextSegment: null },
+    });
+    const text = getWhyText(state);
+    expect(text).not.toMatch(/=\d/);
+  });
+});
+
+describe("HYPERPARAM_TOOLTIPS", () => {
+  it("documents SW-LinUCB window relative to Content Format drift", () => {
+    expect(HYPERPARAM_TOOLTIPS.linucb_sw_window).toContain("drift");
+    expect(HYPERPARAM_META.linucb_sw_window.tooltip).toContain("step 200");
   });
 });
 

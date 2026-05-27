@@ -165,7 +165,14 @@ interface HyperparamConfig {
   max: number;
   step: number;
   format?: (v: number) => string;
+  tooltip?: string;
 }
+
+/** Hyperparameter tooltips for settings UI (alias of optional `tooltip` on HYPERPARAM_META). */
+export const HYPERPARAM_TOOLTIPS: Partial<Record<string, string>> = {
+  linucb_sw_window:
+    "Set window ≤ drift onset to adapt quickly; larger windows retain stale pre-drift observations. Default 200 matches Content Format drift at step 200.",
+};
 
 export const HYPERPARAM_META: Record<string, HyperparamConfig> = {
   alpha: { label: "\u03B1 — Exploration width", min: 0.1, max: 10, step: 0.1 },
@@ -213,6 +220,7 @@ export const HYPERPARAM_META: Record<string, HyperparamConfig> = {
     max: 1000,
     step: 50,
     format: (v) => `${v}`,
+    tooltip: HYPERPARAM_TOOLTIPS.linucb_sw_window,
   },
   rf_n_estimators: { label: "Number of trees", min: 2, max: 200, step: 10, format: (v) => `${v}` },
   rf_max_depth: { label: "Max tree depth", min: 1, max: 20, step: 1, format: (v) => `${v}` },
@@ -497,6 +505,16 @@ export function formatEstimateStat(
   return "—";
 }
 
+function contextualStepPrefix(simState: SimState, lastStep: SimState["history"][number]): string {
+  if (!lastStep.context?.length) return "";
+  const labels = simState.featureLabels ?? simState.featureNames ?? [];
+  const contextStr = `(${lastStep.context
+    .map((v, i) => `${labels[i] ?? `F${i}`}=${v.toFixed(2)}`)
+    .join(", ")})`;
+  const segment = lastStep.contextSegment ? `${lastStep.contextSegment} ` : "";
+  return `${segment}${contextStr}. `;
+}
+
 export function getWhyText(simState: SimState): string {
   const lastStep = simState.history[simState.history.length - 1];
   if (!lastStep) return "";
@@ -506,6 +524,7 @@ export function getWhyText(simState: SimState): string {
   const score = lastStep.scores[lastStep.chosenIdx] ?? { mean: 0, bonus: 0, score: 0, formula: "" };
   const shownScore = clampDisplayScore(score.score ?? 0);
   const presentation = getAlgorithmPresentation(simState.algorithm);
+  const ctxPrefix = contextualStepPrefix(simState, lastStep);
 
   switch (presentation.family) {
     case "ucb_classic":
@@ -517,13 +536,13 @@ export function getWhyText(simState: SimState): string {
     case "thompson_beta":
       return `${chosen.label} had the highest Thompson draw score this step (${shownScore}). Arms with fewer observations have wider Beta posteriors and occasionally “win” the draw — this drives natural exploration.`;
     case "linear_ucb":
-      return `${chosen.label} had the highest LinUCB score for this context. Exploit term: ${(score.mean ?? 0).toFixed(3)}, uncertainty bonus: ${(score.bonus ?? 0).toFixed(3)}. The bonus is large when the context is novel for this arm.`;
+      return `${ctxPrefix}${chosen.label} had the highest LinUCB score for this context. Exploit term: ${(score.mean ?? 0).toFixed(3)}, uncertainty bonus: ${(score.bonus ?? 0).toFixed(3)}. The bonus is large when the context is novel for this arm.`;
     case "linear_ts":
-      return `${chosen.label} had the highest LinTS score for this context (${shownScore}). LinTS uses Bayesian linear regression, so exploration comes from posterior uncertainty rather than an explicit UCB bonus bar.`;
+      return `${ctxPrefix}${chosen.label} had the highest LinTS score for this context (${shownScore}). LinTS uses Bayesian linear regression, so exploration comes from posterior uncertainty rather than an explicit UCB bonus bar.`;
     case "hybrid_ucb":
-      return `${chosen.label} had the highest hybrid score, combining shared features across all arms and arm-specific features. The shared part learns global patterns; the arm-specific part captures per-channel differences.`;
+      return `${ctxPrefix}${chosen.label} had the highest hybrid score, combining shared features across all arms and arm-specific features. The shared part learns global patterns; the arm-specific part captures per-channel differences.`;
     case "sliding_window_ucb":
-      return `${chosen.label} had the highest score using a sliding-window regression (last ${simState.hyperparams.linucb_sw_window ?? 200} observations). This helps adapt when reward distributions change over time.`;
+      return `${ctxPrefix}${chosen.label} had the highest score using a sliding-window regression (last ${simState.hyperparams.linucb_sw_window ?? 200} observations). This helps adapt when reward distributions change over time.`;
     case "softmax":
       return `${chosen.label} was selected from a softmax distribution over policy scores; its score this step was ${shownScore} with temperature τ=${(simState.hyperparams.softmax_tau ?? 1).toFixed(1)}. Lower τ is more greedy, higher τ is more random.`;
     case "neural_linear":
