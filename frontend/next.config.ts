@@ -5,7 +5,9 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "");
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ||
+      (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "");
     if (!apiUrl) {
       return [];
     }

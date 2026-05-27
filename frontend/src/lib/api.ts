@@ -25,15 +25,19 @@ function getApiBase(): string {
     return normalizeBaseUrl(envUrl);
   }
 
-  if (typeof window !== "undefined") {
-    const { hostname, origin } = window.location;
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return "http://localhost:8000";
-    }
-    return origin;
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "test") {
+    return "http://localhost:8000";
   }
 
-  return "http://localhost:8000";
+  if (typeof window !== "undefined") {
+    return "";
+  }
+
+  if (typeof process !== "undefined" && process.env?.NODE_ENV === "development") {
+    return "http://127.0.0.1:8000";
+  }
+
+  return "";
 }
 
 const API_BASE = getApiBase();
@@ -190,10 +194,25 @@ async function request<T>(
 
     if (res.status === 204) return undefined as T;
 
-    const json = await res.json();
+    let json: unknown;
+    try {
+      json = await res.json();
+    } catch (error) {
+      if (!res.ok) {
+        throw new ApiError(
+          res.status,
+          `Unexpected non-JSON response from ${path}. Check NEXT_PUBLIC_API_URL or Next.js API rewrites.`,
+        );
+      }
+
+      throw error;
+    }
 
     if (!res.ok) {
-      const detail = json?.detail ?? `HTTP ${res.status}`;
+      const detail =
+        typeof json === "object" && json !== null && "detail" in json
+          ? json.detail
+          : `HTTP ${res.status}`;
       throw new ApiError(res.status, typeof detail === "string" ? detail : JSON.stringify(detail));
     }
 

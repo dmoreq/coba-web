@@ -267,6 +267,18 @@ describe("ApiError", () => {
     await expect(api.getSimulation("x")).rejects.toThrow(ApiError);
   });
 
+  it("wraps non-json error responses with a config hint", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      json: () => Promise.reject(new SyntaxError("Unexpected token '<'")),
+    });
+
+    await expect(api.getScenarios()).rejects.toThrow(
+      "Unexpected non-JSON response from /api/scenarios. Check NEXT_PUBLIC_API_URL or Next.js API rewrites.",
+    );
+  });
+
   it("propagates abort errors on timeout", async () => {
     vi.useFakeTimers();
     const abortError = new DOMException("The operation was aborted.", "AbortError");
