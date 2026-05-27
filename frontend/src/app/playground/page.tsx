@@ -10,14 +10,16 @@ import { UCBDisplay } from "@/components/estimates/UCBDisplay";
 import { PageShell } from "@/components/layout/PageShell";
 import { ControlBar } from "@/components/playground/ControlBar";
 import { EnvPanel } from "@/components/playground/EnvPanel";
+import { ScenarioInfoBar } from "@/components/playground/ScenarioInfoBar";
 import { StepFeed } from "@/components/playground/StepFeed";
 import { WhyPanel } from "@/components/playground/WhyPanel";
 import { Panel } from "@/components/ui/Panel";
 import { useSimulationRunner } from "@/hooks/useSimulationRunner";
+import { api } from "@/lib/api";
 import { DEFAULT_ARMS, DEFAULT_HYPERPARAMS, createDefaultSimState } from "@/lib/constants";
-import type { AlgorithmId, SimState } from "@/lib/types";
+import type { AlgorithmId, ScenarioInfo, SimState } from "@/lib/types";
 import { useSimulationStore } from "@/store/simulation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 function defaultDisplay(): SimState {
   return createDefaultSimState("ucb1");
@@ -40,8 +42,21 @@ export default function PlaygroundPage() {
   const switchScenario = useSimulationStore((s) => s.switchScenario);
 
   const [showGT, setShowGT] = useState(false);
+  const [scenarios, setScenarios] = useState<ScenarioInfo[]>([]);
   const display = simState ?? defaultDisplay();
   const initialized = useRef(false);
+
+  useEffect(() => {
+    api
+      .getScenarios()
+      .then(setScenarios)
+      .catch(() => setScenarios([]));
+  }, []);
+
+  const selectedScenario = useMemo(
+    () => scenarios.find((s) => s.id === scenarioId),
+    [scenarios, scenarioId],
+  );
 
   // Initialize simulation once — reuse existing store sim if coming back via SPA nav
   useEffect(() => {
@@ -81,6 +96,7 @@ export default function PlaygroundPage() {
         onScenarioChange={(newScenarioId) => switchScenario(newScenarioId)}
         isLoading={isLoading}
       />
+      <ScenarioInfoBar scenario={selectedScenario ?? null} />
       <div className="flex-1 flex overflow-hidden">
         <StepFeed
           history={display.history}
@@ -88,6 +104,7 @@ export default function PlaygroundPage() {
           t={display.t}
           featureNames={display.featureNames}
           featureLabels={display.featureLabels}
+          algorithm={display.algorithm}
         />
         <div className="flex-1 overflow-y-auto p-lg bg-surface-page flex flex-col gap-[10px]">
           {isLoading && (
@@ -114,6 +131,10 @@ export default function PlaygroundPage() {
                 arms={display.arms}
                 featureNames={display.featureNames}
                 featureLabels={display.featureLabels}
+                featureMins={display.featureMins}
+                featureMaxs={display.featureMaxs}
+                totalSteps={display.t}
+                historyWindow={display.historyWindow}
                 width={620}
                 height={280}
               />
@@ -124,7 +145,12 @@ export default function PlaygroundPage() {
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">
                 Cumulative Regret
               </div>
-              <RegretLineChart regretHistory={display.regretHistory} height={180} />
+              <RegretLineChart
+                regretHistory={display.regretHistory}
+                height={180}
+                driftStep={selectedScenario?.driftStep ?? undefined}
+                driftEndStep={selectedScenario?.driftEndStep ?? undefined}
+              />
             </div>
             <div className="flex-1 bg-white border border-gray-3 rounded-md shadow-sm p-lg">
               <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-gray-6 mb-[10px]">

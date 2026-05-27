@@ -90,13 +90,20 @@ export interface ApiSimState {
   t: number;
   arms: Array<{ id: string; label: string; trueProb: number; color: string; lightColor: string }>;
   armStates: Array<{ n: number; successes: number; failures: number }>;
-  linMeta: Array<{ A: [[number, number], [number, number]]; b: [number, number] }>;
+  linMeta: Array<{ A: number[][]; b: number[] }>;
   algorithm: AlgorithmId;
   alpha: number;
   epsilon: number;
   scenarioId: string | null;
   featureNames: string[];
   featureLabels: string[];
+  featureDescriptions?: string[];
+  featureUnits?: (string | null)[];
+  featureMins?: number[];
+  featureMaxs?: number[];
+  featureLowLabels?: string[];
+  featureHighLabels?: string[];
+  historyWindow?: number;
   history: Array<{
     t: number;
     chosenIdx: number;

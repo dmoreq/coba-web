@@ -18,8 +18,8 @@ export interface ArmState {
 
 /** LinUCB per-arm linear regression meta (A matrix + b vector) */
 export interface LinMeta {
-  A: [[number, number], [number, number]];
-  b: [number, number];
+  A: number[][];
+  b: number[];
 }
 
 /** Score decomposition for one arm at a single step */
@@ -64,6 +64,9 @@ export interface SimState {
   featureUnits?: (string | null)[];
   featureMins?: number[];
   featureMaxs?: number[];
+  featureLowLabels?: string[];
+  featureHighLabels?: string[];
+  historyWindow?: number;
   t: number;
   history: StepRecord[];
   regretHistory: number[];

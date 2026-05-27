@@ -557,8 +557,8 @@ export function createDefaultSimState(algorithm: AlgorithmId = "ucb1"): SimState
       A: [
         [1, 0],
         [0, 1],
-      ] as [[number, number], [number, number]],
-      b: [0, 0] as [number, number],
+      ],
+      b: [0, 0],
     })),
     algorithm,
     hyperparams: { ...hp },
