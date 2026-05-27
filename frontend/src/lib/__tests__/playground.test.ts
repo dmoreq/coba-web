@@ -1,7 +1,10 @@
 import {
   formatEstimateStat,
   getCurrentTrueProb,
+  getEstimateLegend,
   getEstimateRenderMode,
+  getFormulaLabel,
+  getWhyText,
   isBestArmRightNow,
 } from "@/lib/constants";
 import type { SimState } from "@/lib/types";
@@ -131,5 +134,24 @@ describe("formatEstimateStat", () => {
         { n: 3, successes: 2, failures: 1 },
       ),
     ).toBe("score=0.600");
+  });
+});
+
+describe("shared copy helpers", () => {
+  it("returns the centralized formula header for formula panel consumers", () => {
+    expect(getFormulaLabel("bootstrapped_ts")).toContain("mean(θ₁..ₖ)");
+  });
+
+  it("returns the centralized legend for raw-score families", () => {
+    expect(getEstimateLegend("bootstrapped_ts")).toEqual({
+      primary: "Policy score",
+    });
+  });
+
+  it("returns WhyPanel copy from the shared family mapping", () => {
+    expect(getWhyText(makeState())).toContain("highest LinUCB score for this context");
+    expect(
+      getWhyText({ ...makeState(), algorithm: "softmax", hyperparams: { softmax_tau: 0.8 } }),
+    ).toContain("softmax distribution over policy scores");
   });
 });

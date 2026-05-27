@@ -256,36 +256,184 @@ export const DEFAULT_SEED = 42;
 export const DEFAULT_SPEED = 0.5;
 export const MAX_HISTORY_LENGTH = 150;
 
-/** Algorithms that use context — show context panel */
-export const CONTEXTUAL_ALGORITHMS = new Set([
-  "epsilon_greedy",
-  "linucb",
-  "lints",
-  "linucb_hybrid",
-  "linucb_sw",
-  "logistic_ucb",
-  "logistic_ts",
-  "neural_linear",
-  "bootstrapped_ts",
-  "bootstrapped_ucb",
-  "gp_ucb",
-  "softmax",
-  "random_forest_ucb",
-  "random_forest_ts",
-]);
-
 export type EstimateRenderMode = "beta" | "decomposed" | "raw";
+export type AlgorithmFamily =
+  | "ucb_classic"
+  | "epsilon_greedy"
+  | "thompson_beta"
+  | "linear_ucb"
+  | "linear_ts"
+  | "hybrid_ucb"
+  | "sliding_window_ucb"
+  | "softmax"
+  | "neural_linear"
+  | "bootstrap_ts"
+  | "bootstrap_ucb"
+  | "logistic_ucb"
+  | "logistic_ts"
+  | "gp_ucb"
+  | "rf_ucb"
+  | "rf_ts";
 
-const DECOMPOSED_ESTIMATE_ALGORITHMS = new Set([
-  "ucb1",
-  "linucb",
-  "linucb_hybrid",
-  "linucb_sw",
-  "logistic_ucb",
-  "gp_ucb",
-  "random_forest_ucb",
-  "bootstrapped_ucb",
-]);
+interface EstimateLegend {
+  primary: string;
+  secondary?: string;
+}
+
+interface AlgorithmPresentation {
+  family: AlgorithmFamily;
+  contextual: boolean;
+  estimateMode: EstimateRenderMode;
+  formulaLabel: string;
+  legend: EstimateLegend | null;
+}
+
+const DECOMPOSED_LEGEND: EstimateLegend = {
+  primary: "Mean estimate",
+  secondary: "Exploration bonus",
+};
+
+const RAW_LEGEND: EstimateLegend = {
+  primary: "Policy score",
+};
+
+export const ALGORITHM_PRESENTATION: Record<AlgorithmId, AlgorithmPresentation> = {
+  ucb1: {
+    family: "ucb_classic",
+    contextual: false,
+    estimateMode: "decomposed",
+    formulaLabel: "Formula: score = μ̂ + α√(2·ln(t)/n)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  thompson: {
+    family: "thompson_beta",
+    contextual: false,
+    estimateMode: "beta",
+    formulaLabel: "Posterior: Beta(successes+1, failures+1)",
+    legend: null,
+  },
+  epsilon_greedy: {
+    family: "epsilon_greedy",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score = mean estimate",
+    legend: RAW_LEGEND,
+  },
+  linucb: {
+    family: "linear_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = θᵖx + α√(xᵖA⁻¹x)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  lints: {
+    family: "linear_ts",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score = θᵖx (sampled from posterior N(μ, v²))",
+    legend: RAW_LEGEND,
+  },
+  linucb_hybrid: {
+    family: "hybrid_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = zᵖβ + xᵖθᵖ + α√(...)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  linucb_sw: {
+    family: "sliding_window_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = θᵖx + α√(xᵖA⁻¹x) (sliding window)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  softmax: {
+    family: "softmax",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "P(arm) = exp(τ·score) / Σexp(τ·score)",
+    legend: RAW_LEGEND,
+  },
+  neural_linear: {
+    family: "neural_linear",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score = φ(x)ᵖθᵖ (MLP embedding + LinTS head)",
+    legend: RAW_LEGEND,
+  },
+  bootstrapped_ts: {
+    family: "bootstrap_ts",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score ~ mean(θ₁..ₖ) + sample(std(θ₁..ₖ))",
+    legend: RAW_LEGEND,
+  },
+  bootstrapped_ucb: {
+    family: "bootstrap_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = mean(θ₁..ₖ) + std(θ₁..ₖ)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  logistic_ucb: {
+    family: "logistic_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = σ(θx) + α·σ₀(θx)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  logistic_ts: {
+    family: "logistic_ts",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score ~ σ(θx) sampled from Laplace posterior",
+    legend: RAW_LEGEND,
+  },
+  gp_ucb: {
+    family: "gp_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = μ(x) + β·σ(x) (GP posterior)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  random_forest_ucb: {
+    family: "rf_ucb",
+    contextual: true,
+    estimateMode: "decomposed",
+    formulaLabel: "score = mean(trees) + std(trees)",
+    legend: DECOMPOSED_LEGEND,
+  },
+  random_forest_ts: {
+    family: "rf_ts",
+    contextual: true,
+    estimateMode: "raw",
+    formulaLabel: "score ~ random tree prediction",
+    legend: RAW_LEGEND,
+  },
+};
+
+/** Algorithms that use context — show context panel */
+export const CONTEXTUAL_ALGORITHMS = new Set(
+  ALGORITHM_ORDER.filter((algorithm) => ALGORITHM_PRESENTATION[algorithm].contextual),
+);
+
+export function getAlgorithmPresentation(algorithm: string): AlgorithmPresentation {
+  return ALGORITHM_PRESENTATION[
+    (algorithm as AlgorithmId) in ALGORITHM_PRESENTATION ? (algorithm as AlgorithmId) : "ucb1"
+  ];
+}
+
+export function getFormulaLabel(algorithm: string): string {
+  return getAlgorithmPresentation(algorithm).formulaLabel;
+}
+
+export function getEstimateLegend(algorithm: string): EstimateLegend | null {
+  return getAlgorithmPresentation(algorithm).legend;
+}
+
+function clampDisplayScore(score: number, max = 99): string {
+  return Math.min(score, max).toFixed(3);
+}
 
 export function getCurrentTrueProb(simState: SimState, armIndex: number): number {
   const lastStep = simState.history[simState.history.length - 1];
@@ -314,9 +462,7 @@ export function getEstimateRenderMode(
   algorithm: string,
   _score: Score | null | undefined,
 ): EstimateRenderMode {
-  if (algorithm === "thompson") return "beta";
-  if (DECOMPOSED_ESTIMATE_ALGORITHMS.has(algorithm)) return "decomposed";
-  return "raw";
+  return getAlgorithmPresentation(algorithm).estimateMode;
 }
 
 export function formatEstimateStat(
@@ -329,12 +475,14 @@ export function formatEstimateStat(
   const rawScore = score?.score ?? 0;
   const sample = score?.sample;
 
-  if (algorithm === "thompson") {
+  const renderMode = getEstimateRenderMode(algorithm, score);
+
+  if (renderMode === "beta") {
     if (sample != null) return `μ=${mean.toFixed(3)} s=${sample.toFixed(3)}`;
-    return `μ=${mean.toFixed(3)} score=${rawScore.toFixed(3)}`;
+    return `μ=${mean.toFixed(3)} score=${clampDisplayScore(rawScore)}`;
   }
 
-  if (bonus > 0) {
+  if (renderMode === "decomposed") {
     return `${mean.toFixed(3)} + ${Math.min(bonus, 9.99).toFixed(3)}`;
   }
 
@@ -343,10 +491,58 @@ export function formatEstimateStat(
   }
 
   if (rawScore > 0 || armState.n > 0) {
-    return `score=${Math.min(rawScore, 99).toFixed(3)}`;
+    return `score=${clampDisplayScore(rawScore)}`;
   }
 
   return "—";
+}
+
+export function getWhyText(simState: SimState): string {
+  const lastStep = simState.history[simState.history.length - 1];
+  if (!lastStep) return "";
+
+  const chosen = simState.arms[lastStep.chosenIdx];
+  const armState = simState.armStates[lastStep.chosenIdx];
+  const score = lastStep.scores[lastStep.chosenIdx] ?? { mean: 0, bonus: 0, score: 0, formula: "" };
+  const shownScore = clampDisplayScore(score.score ?? 0);
+  const presentation = getAlgorithmPresentation(simState.algorithm);
+
+  switch (presentation.family) {
+    case "ucb_classic":
+      return `${chosen.label} had the highest UCB score: mean(${(score.mean ?? 0).toFixed(3)}) + bonus(${Math.min(score.bonus ?? 0, 9.99).toFixed(3)}) = ${shownScore}. The exploration bonus shrinks as n grows — arm has been pulled ${armState.n} times.`;
+    case "epsilon_greedy":
+      return lastStep.wasRandom
+        ? `${chosen.label} was picked randomly (ε-exploration). With ε=${simState.epsilon}, there’s a ${(simState.epsilon * 100).toFixed(0)}% chance each step is random, forcing the algorithm to try underexplored arms.`
+        : `${chosen.label} was the greedy pick this step with the highest policy score (${shownScore}). In this simulator ε-greedy still uses contextual features, but only the ε fraction of steps force random exploration.`;
+    case "thompson_beta":
+      return `${chosen.label} had the highest Thompson draw score this step (${shownScore}). Arms with fewer observations have wider Beta posteriors and occasionally “win” the draw — this drives natural exploration.`;
+    case "linear_ucb":
+      return `${chosen.label} had the highest LinUCB score for this context. Exploit term: ${(score.mean ?? 0).toFixed(3)}, uncertainty bonus: ${(score.bonus ?? 0).toFixed(3)}. The bonus is large when the context is novel for this arm.`;
+    case "linear_ts":
+      return `${chosen.label} had the highest LinTS score for this context (${shownScore}). LinTS uses Bayesian linear regression, so exploration comes from posterior uncertainty rather than an explicit UCB bonus bar.`;
+    case "hybrid_ucb":
+      return `${chosen.label} had the highest hybrid score, combining shared features across all arms and arm-specific features. The shared part learns global patterns; the arm-specific part captures per-channel differences.`;
+    case "sliding_window_ucb":
+      return `${chosen.label} had the highest score using a sliding-window regression (last ${simState.hyperparams.linucb_sw_window ?? 200} observations). This helps adapt when reward distributions change over time.`;
+    case "softmax":
+      return `${chosen.label} was selected from a softmax distribution over policy scores; its score this step was ${shownScore} with temperature τ=${(simState.hyperparams.softmax_tau ?? 1).toFixed(1)}. Lower τ is more greedy, higher τ is more random.`;
+    case "neural_linear":
+      return `${chosen.label} had the highest neural-linear policy score this step (${shownScore}). The MLP learns non-linear features, while the linear head handles decision-time uncertainty.`;
+    case "bootstrap_ts":
+      return `${chosen.label} won the bootstrap Thompson-style score this step (${shownScore}). ${simState.hyperparams.n_bootstraps ?? 10} models provide an ensemble of predictions, and exploration comes from disagreement across those models.`;
+    case "bootstrap_ucb":
+      return `${chosen.label} had the highest bootstrapped policy score this step (${shownScore}). The ensemble uses disagreement across ${simState.hyperparams.n_bootstraps ?? 10} models as its exploration signal.`;
+    case "logistic_ucb":
+      return `${chosen.label} had the highest logistic UCB score. A logistic model models binary rewards directly — the score combines predicted probability with an uncertainty bonus.`;
+    case "logistic_ts":
+      return `${chosen.label} had the highest logistic Thompson-style score this step (${shownScore}). It is designed for binary rewards and uses posterior uncertainty rather than an explicit bonus term.`;
+    case "gp_ucb":
+      return `${chosen.label} had the highest GP-UCB score. The Gaussian Process models the reward surface as a smooth function — exploration is driven by predictive variance. Best for small-step regimes (GP is O(n³)).`;
+    case "rf_ucb":
+      return `${chosen.label} had the highest tree-ensemble score. ${simState.hyperparams.rf_n_estimators ?? 50} trees vote, and the standard deviation across trees becomes the exploration bonus — more disagreement = more uncertainty.`;
+    case "rf_ts":
+      return `${chosen.label} won the random-forest Thompson-style score this step (${shownScore}). Instead of showing a separate bonus, the ensemble explores through disagreement among tree predictions.`;
+  }
 }
 
 /**

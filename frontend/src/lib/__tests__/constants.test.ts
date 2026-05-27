@@ -1,10 +1,13 @@
 import {
   ALGORITHM_ORDER,
+  ALGORITHM_PRESENTATION,
   ALGO_META,
   CONTEXTUAL_ALGORITHMS,
   DEFAULT_HYPERPARAMS,
   HYPERPARAM_META,
   createDefaultSimState,
+  getEstimateLegend,
+  getFormulaLabel,
 } from "@/lib/constants";
 import { describe, expect, it } from "vitest";
 
@@ -38,6 +41,23 @@ describe("ALGORITHM_ORDER", () => {
 describe("CONTEXTUAL_ALGORITHMS", () => {
   it("includes epsilon_greedy because the backend treats it as contextual", () => {
     expect(CONTEXTUAL_ALGORITHMS.has("epsilon_greedy")).toBe(true);
+  });
+});
+
+describe("ALGORITHM_PRESENTATION", () => {
+  it("has an entry for every algorithm", () => {
+    expect(Object.keys(ALGORITHM_PRESENTATION).sort()).toEqual([...ALGORITHM_ORDER].sort());
+  });
+
+  it("keeps beta algorithms legend-free and raw/decomposed algorithms labeled", () => {
+    expect(ALGORITHM_PRESENTATION.thompson.legend).toBeNull();
+    expect(ALGORITHM_PRESENTATION.linucb.legend).toEqual({
+      primary: "Mean estimate",
+      secondary: "Exploration bonus",
+    });
+    expect(ALGORITHM_PRESENTATION.bootstrapped_ts.legend).toEqual({
+      primary: "Policy score",
+    });
   });
 });
 
@@ -131,5 +151,23 @@ describe("createDefaultSimState", () => {
     const b = createDefaultSimState("linucb");
     expect(a.hyperparams).toEqual(b.hyperparams);
     expect(a.hyperparams).not.toBe(b.hyperparams);
+  });
+});
+
+describe("shared presentation helpers", () => {
+  it("returns formula labels from the centralized presentation map", () => {
+    expect(getFormulaLabel("linucb")).toBe("score = θᵖx + α√(xᵖA⁻¹x)");
+    expect(getFormulaLabel("softmax")).toBe("P(arm) = exp(τ·score) / Σexp(τ·score)");
+  });
+
+  it("returns legend labels from the centralized presentation map", () => {
+    expect(getEstimateLegend("linucb")).toEqual({
+      primary: "Mean estimate",
+      secondary: "Exploration bonus",
+    });
+    expect(getEstimateLegend("thompson")).toBeNull();
+    expect(getEstimateLegend("bootstrapped_ts")).toEqual({
+      primary: "Policy score",
+    });
   });
 });
