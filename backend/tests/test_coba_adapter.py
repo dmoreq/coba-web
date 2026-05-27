@@ -323,3 +323,18 @@ class TestTruncatedNormalSampling:
             adapter.step(h)
             ctx = adapter.get_state(h).history[-1].context
             assert all(-1.0 <= v <= 1.0 for v in ctx)
+
+
+class TestSimStateFeatureMetadata:
+    def test_get_state_includes_descriptions(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "notification_channels")
+        state = adapter.get_state(h)
+        assert len(state.feature_descriptions) == 2
+        assert "mobile" in state.feature_descriptions[0].lower()
+
+    def test_get_state_includes_mins_maxs_and_units(self, adapter):
+        h = adapter.create(None, "linucb", {"alpha": 2.0}, 42, "notification_channels")
+        state = adapter.get_state(h)
+        assert state.feature_mins == [-1.0, -1.0]
+        assert state.feature_maxs == [1.0, 1.0]
+        assert len(state.feature_units) == 2

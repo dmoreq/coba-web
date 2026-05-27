@@ -54,6 +54,10 @@ function normalizeSimState(state: Partial<SimState>, algorithm: AlgorithmId): Si
     algorithm,
     featureNames: state.featureNames ?? [],
     featureLabels: state.featureLabels ?? [],
+    featureDescriptions: state.featureDescriptions ?? [],
+    featureUnits: state.featureUnits ?? [],
+    featureMins: state.featureMins ?? [],
+    featureMaxs: state.featureMaxs ?? [],
     scenarioId: state.scenarioId ?? null,
   };
 }
@@ -111,6 +115,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         ...simState,
         featureNames: simState.featureNames ?? [],
         featureLabels: simState.featureLabels ?? [],
+        featureDescriptions: simState.featureDescriptions ?? [],
+        featureUnits: simState.featureUnits ?? [],
+        featureMins: simState.featureMins ?? [],
+        featureMaxs: simState.featureMaxs ?? [],
         t: stepResponse.t,
         armStates: stepResponse.armStates,
         regretHistory: stepResponse.regretHistory,

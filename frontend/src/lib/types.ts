@@ -60,6 +60,10 @@ export interface SimState {
   scenarioId: string | null;
   featureNames: string[];
   featureLabels: string[];
+  featureDescriptions?: string[];
+  featureUnits?: (string | null)[];
+  featureMins?: number[];
+  featureMaxs?: number[];
   t: number;
   history: StepRecord[];
   regretHistory: number[];
@@ -101,4 +105,9 @@ export interface ScenarioInfo {
   featureCount: number;
   armCount: number;
   hasDrift: boolean;
+  recommendedAlgorithms?: string[];
+  difficulty?: "introductory" | "intermediate" | "advanced";
+  rewardSurface?: "linear" | "loglinear" | "nonlinear" | "drifting";
+  driftStep?: number | null;
+  driftEndStep?: number | null;
 }
