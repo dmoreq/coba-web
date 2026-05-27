@@ -17,7 +17,13 @@ function simCreateResponse(page: Page) {
 }
 
 function simStepResponse(page: Page) {
-  return page.waitForResponse((r) => r.url().includes("/api/simulate/") && r.url().includes("/step") && r.ok());
+  return page.waitForResponse(
+    (r) =>
+      r.url().includes("/api/simulate/") &&
+      r.url().includes("/step") &&
+      r.request().method() === "POST" &&
+      r.ok(),
+  );
 }
 
 export async function selectCompareAlgorithm(page: Page, side: "A" | "B", name: string) {
@@ -27,13 +33,12 @@ export async function selectCompareAlgorithm(page: Page, side: "A" | "B", name: 
 }
 
 export async function compareStep(page: Page) {
-  const step = simStepResponse(page);
+  const steps = Promise.all([simStepResponse(page), simStepResponse(page)]);
   await page.getByText("Step →").click();
-  await step;
+  await steps;
 }
 
-export async function expectCompareSteps(page: Page, value: string) {
-  await expect(page.locator(".tabular-nums").filter({ hasText: new RegExp(`^${value}$`) }).first()).toBeVisible({
-    timeout: 15_000,
-  });
+export async function expectCompareSteps(page: Page, side: "A" | "B", value: string) {
+  const testId = side === "A" ? "compare-steps-a" : "compare-steps-b";
+  await expect(page.getByTestId(testId)).toHaveText(value, { timeout: 15_000 });
 }

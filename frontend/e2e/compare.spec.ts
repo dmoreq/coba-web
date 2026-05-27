@@ -11,7 +11,7 @@ test.describe("Compare page", () => {
   test("switch algorithm B and step", async ({ page }) => {
     await selectCompareAlgorithm(page, "B", "LinUCB");
     await compareStep(page);
-    await expectCompareSteps(page, "1");
+    await expectCompareSteps(page, "A", "1");
   });
 
   test("dual regret comparison chart after steps", async ({ page }) => {
@@ -25,9 +25,9 @@ test.describe("Compare page", () => {
     await expect(page.getByRole("button", { name: /Hide truth/i })).toBeVisible();
   });
 
-  test("reset returns to t=0", async ({ page }) => {
+  test("reset returns Steps to 0", async ({ page }) => {
     await compareStep(page);
     await page.getByRole("button", { name: "Reset" }).click();
-    await expectCompareSteps(page, "0");
+    await expectCompareSteps(page, "A", "0");
   });
 });

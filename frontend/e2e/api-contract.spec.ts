@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  API,
   apiCreateSim,
   apiDelete,
   apiHealth,
@@ -37,7 +38,7 @@ test.describe("API simulation lifecycle", () => {
       const run = await apiRun(request, id, 5);
       expect(run.final_t).toBe(6);
 
-      const get = await request.get(`http://localhost:8000/api/simulate/${id}`);
+      const get = await request.get(`${API}/api/simulate/${id}`);
       expect(get.ok()).toBe(true);
       const body = (await get.json()) as { state: { t: number } };
       expect(body.state.t).toBe(6);
@@ -47,9 +48,7 @@ test.describe("API simulation lifecycle", () => {
   });
 
   test("step unknown sim returns 404", async ({ request }) => {
-    const r = await request.post(
-      "http://localhost:8000/api/simulate/00000000-0000-0000-0000-000000000000/step",
-    );
+    const r = await request.post(`${API}/api/simulate/00000000-0000-0000-0000-000000000000/step`);
     expect(r.status()).toBe(404);
   });
 });
@@ -71,7 +70,7 @@ test.describe("API per scenario", () => {
 
 test.describe("API algorithms", () => {
   test("GET /api/algorithms returns 16 entries", async ({ request }) => {
-    const r = await request.get("http://localhost:8000/api/algorithms");
+    const r = await request.get(`${API}/api/algorithms`);
     expect(r.ok()).toBe(true);
     const list = (await r.json()) as unknown[];
     expect(list.length).toBe(16);

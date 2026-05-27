@@ -1,6 +1,6 @@
 import type { APIRequestContext } from "@playwright/test";
 
-const API = "http://localhost:8000";
+export const API = process.env.API_BASE_URL ?? "http://localhost:8000";
 
 export async function apiHealth(request: APIRequestContext): Promise<boolean> {
   const r = await request.get(`${API}/api/health`);
