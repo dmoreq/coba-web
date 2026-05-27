@@ -24,7 +24,7 @@ from coba_server.models.simulation import (
 )
 from coba_server.services.base import CobaAdapter
 from coba_server.services.scenario_registry import get_scenario
-from coba_server.utils.context_sampling import sample_segment_context, truncated_normal
+from coba_server.utils.context_sampling import sample_segment_context
 
 MAX_ACTIVE_SIMULATIONS = 100
 MAX_HISTORY_LENGTH = 150
@@ -89,16 +89,6 @@ def _compute_logit(
                 logit += interaction_weights[k] * float(context[i] * context[j])
                 k += 1
     return logit
-
-
-def _truncated_normal(
-    rng: np.random.Generator,
-    mean: float,
-    std: float,
-    low: float,
-    high: float,
-) -> float:
-    return truncated_normal(rng, mean, std, low, high)
 
 
 def _cap_score(raw: float) -> float:
