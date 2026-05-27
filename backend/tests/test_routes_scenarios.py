@@ -29,3 +29,17 @@ class TestScenariosRoute:
     def test_content_format_has_drift_true(self, client):
         scenarios = {item["id"]: item for item in client.get("/api/scenarios").json()}
         assert scenarios["content_format"]["has_drift"] is True
+
+    def test_content_format_recommends_sw_linucb(self, client):
+        scenarios = {item["id"]: item for item in client.get("/api/scenarios").json()}
+        cf = scenarios["content_format"]
+        assert "linucb_sw" in cf["recommended_algorithms"]
+        assert cf["difficulty"] == "intermediate"
+        assert cf["reward_surface"] == "drifting"
+        assert cf["drift_step"] == 200
+        assert cf["drift_end_step"] == 300
+
+    def test_ad_creative_recommends_hybrid(self, client):
+        scenarios = {item["id"]: item for item in client.get("/api/scenarios").json()}
+        ac = scenarios["ad_creative_selection"]
+        assert "linucb_hybrid" in ac["recommended_algorithms"]

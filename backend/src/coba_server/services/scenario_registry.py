@@ -523,6 +523,34 @@ AD_CREATIVE_SELECTION = ContextScenario(
 # Scenario Registry
 # ────────────────────────────────────────────────────────────────────────────
 
+SCENARIO_INFO_META: dict[str, dict[str, list[str] | str]] = {
+    "notification_channels": {
+        "recommended_algorithms": ["linucb", "lints"],
+        "difficulty": "introductory",
+        "reward_surface": "loglinear",
+    },
+    "news_feed": {
+        "recommended_algorithms": ["linucb", "neural_linear", "random_forest_ucb"],
+        "difficulty": "intermediate",
+        "reward_surface": "nonlinear",
+    },
+    "product_recommendations": {
+        "recommended_algorithms": ["gp_ucb", "linucb"],
+        "difficulty": "intermediate",
+        "reward_surface": "loglinear",
+    },
+    "content_format": {
+        "recommended_algorithms": ["linucb_sw", "linucb"],
+        "difficulty": "intermediate",
+        "reward_surface": "drifting",
+    },
+    "ad_creative_selection": {
+        "recommended_algorithms": ["linucb_hybrid", "linucb"],
+        "difficulty": "intermediate",
+        "reward_surface": "loglinear",
+    },
+}
+
 SCENARIO_REGISTRY: dict[str, ContextScenario] = {
     scenario.id: scenario
     for scenario in [

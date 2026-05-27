@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -180,3 +180,8 @@ class ScenarioInfo(BaseModel):
     feature_count: int
     arm_count: int
     has_drift: bool
+    recommended_algorithms: list[str] = Field(default_factory=list)
+    difficulty: Literal["introductory", "intermediate", "advanced"] = "introductory"
+    reward_surface: Literal["linear", "loglinear", "nonlinear", "drifting"] = "loglinear"
+    drift_step: int | None = None
+    drift_end_step: int | None = None

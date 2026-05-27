@@ -170,6 +170,11 @@ export interface ApiScenarioInfo {
   featureCount: number;
   armCount: number;
   hasDrift: boolean;
+  recommendedAlgorithms?: string[];
+  difficulty?: "introductory" | "intermediate" | "advanced";
+  rewardSurface?: "linear" | "loglinear" | "nonlinear" | "drifting";
+  driftStep?: number | null;
+  driftEndStep?: number | null;
 }
 
 // ── Request helpers ──
