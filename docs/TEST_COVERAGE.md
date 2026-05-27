@@ -14,8 +14,8 @@ This document summarizes automated test coverage by **model**, **feature** (acti
 |-------|------------|-------|-----------------|
 | **Backend** (`pytest`) | 10 | **178** | **99%** line coverage on `coba_server` |
 | **Frontend** (`vitest`) | 24 | **180** | **92.89%** lines (Vitest v8 + CI thresholds) |
-| **E2E** (`playwright`) | 2 | **37** | 34 integration smoke + **3 visual regression** baselines |
-| **Total** | 36 | **395** | Follow-up plan complete (see [Post follow-up](#post-follow-up-plan-2026-05-27)) |
+| **E2E** (`playwright`) | 12 | **71** (70 in CI; 1 drift test needs `E2E_SLOW=1`) | Split specs + API contract + **5 visual** baselines |
+| **Total** | 46 | **429** | Full-stack E2E plan complete (see [E2E inventory](#e2e-tests-71)) |
 
 **Takeaways**
 
@@ -31,8 +31,9 @@ Verified locally on 2026-05-27 (post gap-closure):
 - `uv run pytest tests/ --cov=coba_server --cov-report=term-missing` → **178 passed**, **99%** total backend coverage.
 - `pnpm test:run` → **15 test files passed**, **157 tests passed**.
 - `pnpm test:coverage` → line coverage report for `src/` (run after `pnpm install`).
-- `pnpm exec playwright test e2e/visual-regression.spec.ts` → **3 passed** (baselines in `e2e/__screenshots__/`).
-- Integration E2E: **26 tests** in `backend-integration.spec.ts` (unchanged count).
+- `pnpm exec playwright test` → **70 passed**, **1 skipped** (205-step drift; run with `E2E_SLOW=1`).
+- Visual baselines in `frontend/e2e/__screenshots__/visual-regression.spec.ts/`.
+- Monolithic `backend-integration.spec.ts` **removed** — logic split across 11 domain specs + `api-contract.spec.ts`.
 
 ---
 
@@ -194,16 +195,26 @@ Static analysis: follow imports from `*.test.ts(x)` files (including `@/` and re
 
 `StepFeedEntry.tsx` is only pulled in at runtime via `StepFeed.tsx`; there is no dedicated test file for feed-entry validation edge cases beyond panel tests that mock state.
 
-### E2E tests (26)
+### E2E tests (71)
 
-File: `frontend/e2e/backend-integration.spec.ts`
+Split across `frontend/e2e/*.spec.ts` with shared helpers in `e2e/helpers/` and fixtures in `e2e/fixtures/`.
 
-| Suite | Purpose |
-|-------|---------|
-| Landing page and navigation | `/`, tab routing, no hydration errors |
-| Playground smoke | Basic playground load and interaction |
-| 16-algorithm smoke (P0 / P1) | Each algorithm can run steps against live backend |
-| Settings / Compare / Results / Glossary | Page-level smoke |
+| Spec file | Tests | Purpose |
+|-----------|------:|---------|
+| `api-contract.spec.ts` | 10 | REST contract vs live backend (`/api/simulate`, scenarios, algorithms) |
+| `navigation.spec.ts` | 8 | Header nav to all routes; per-route smoke; no hydration errors |
+| `algorithms.spec.ts` | 16 | Each of 16 algorithms runs 3 steps on default scenario |
+| `playground.spec.ts` | 8 | Controls, charts, Why panel; **1 drift test** (skipped unless `E2E_SLOW=1`) |
+| `scenarios.spec.ts` | 8 | All 5 scenario switches; drift badge; News Feed; Ad Creative segments |
+| `settings.spec.ts` | 3 | Apply → playground; LinUCB hyperparams; add/remove arm |
+| `compare.spec.ts` | 4 | Algo B switch + step; dual regret chart; GT toggle; reset |
+| `results.spec.ts` | 2 | Empty state; populated stats after SPA nav (store preserved) |
+| `landing.spec.ts` | 3 | CTAs, scenario showcase, algorithm strip |
+| `glossary.spec.ts` | 2 | Search + expand card |
+| `cross-page.spec.ts` | 2 | Settings → playground → results; scenario persistence |
+| `visual-regression.spec.ts` | 5 | Full-page screenshots (playground, landing, settings, compare, results) |
+
+**CI default:** `pnpm exec playwright test` runs **70** tests (drift skipped). **Nightly / local:** `E2E_SLOW=1 pnpm exec playwright test` includes the 205-step Content Format drift annotation test.
 
 E2E improves release confidence but does **not** replace unit coverage for component logic or negative paths.
 
@@ -549,3 +560,4 @@ Implemented per [2026-05-27-test-coverage-follow-up.md](./superpowers/plans/2026
 | 2026-05-27 | QA/QC review: verified backend/frontend unit commands, corrected E2E count to 26, expanded backend gap findings |
 | 2026-05-27 | Post gap-closure: 364 tests, 99% backend coverage, visual baselines committed |
 | 2026-05-27 | Follow-up plan: 395 tests, 92.89% frontend lines, CI gates + 16-algorithm E2E |
+| 2026-05-27 | Full-stack E2E plan: 71 Playwright tests in 12 files, API contract layer, 5 visual baselines, drift gated by `E2E_SLOW` |
