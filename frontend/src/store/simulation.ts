@@ -29,10 +29,10 @@ interface SimulationStore {
   step: () => Promise<void>;
   play: () => void;
   pause: () => void;
-  reset: (algo?: AlgorithmId) => Promise<void>;
+  reset: (algo?: AlgorithmId, scenarioId?: string) => Promise<void>;
+  switchScenario: (scenarioId: string) => Promise<void>;
   setSpeed: (v: number) => void;
   setSeed: (s: number) => void;
-  setScenario: (scenarioId: string) => void;
   applySettings: (payload: SettingsPayload) => Promise<void>;
   clearError: () => void;
 }
@@ -130,9 +130,17 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   pause: () => set({ isRunning: false }),
 
-  reset: async (algo?: AlgorithmId) => {
-    const { simState, seed, simId: oldSimId, scenarioId } = get();
+  switchScenario: async (scenarioId: string) => {
+    const { simState } = get();
+    const algorithm = simState?.algorithm ?? "ucb1";
+    const hyperparams = simState?.hyperparams ?? DEFAULT_HYPERPARAMS[algorithm];
+    await get().initialize(null, algorithm, hyperparams, scenarioId);
+  },
+
+  reset: async (algo?: AlgorithmId, scenarioId?: string) => {
+    const { simState, seed, simId: oldSimId, scenarioId: currentScenario } = get();
     if (!simState) return;
+    const targetScenario = scenarioId ?? currentScenario;
     set({ isRunning: false, isLoading: true, error: null });
     try {
       if (oldSimId) {
@@ -148,7 +156,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         algorithm,
         hyperparams,
         seed,
-        scenarioId,
+        targetScenario,
       );
       set({
         simId: result.id,
@@ -156,6 +164,7 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
           ...normalizeSimState(result.state as SimState, algorithm),
           hyperparams: { ...hyperparams },
         },
+        scenarioId: targetScenario,
         isLoading: false,
       });
     } catch (e) {
@@ -169,8 +178,6 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   setSpeed: (speed) => set({ speed }),
 
   setSeed: (seed) => set({ seed }),
-
-  setScenario: (scenarioId) => set({ scenarioId }),
 
   applySettings: async ({ arms, algorithm: algo, hyperparams }) => {
     const { simId: oldSimId, scenarioId } = get();

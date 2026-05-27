@@ -37,7 +37,7 @@ export default function PlaygroundPage() {
   const initialize = useSimulationStore((s) => s.initialize);
   const clearError = useSimulationStore((s) => s.clearError);
   const scenarioId = useSimulationStore((s) => s.scenarioId);
-  const setScenario = useSimulationStore((s) => s.setScenario);
+  const switchScenario = useSimulationStore((s) => s.switchScenario);
 
   const [showGT, setShowGT] = useState(false);
   const display = simState ?? defaultDisplay();
@@ -78,10 +78,7 @@ export default function PlaygroundPage() {
         onReset={(algo) => storeReset(algo as AlgorithmId)}
         onSpeedChange={storeSetSpeed}
         scenarioId={scenarioId}
-        onScenarioChange={async (newScenarioId) => {
-          setScenario(newScenarioId);
-          await initialize(null, display.algorithm, display.hyperparams, newScenarioId);
-        }}
+        onScenarioChange={(newScenarioId) => switchScenario(newScenarioId)}
         isLoading={isLoading}
       />
       <div className="flex-1 flex overflow-hidden">

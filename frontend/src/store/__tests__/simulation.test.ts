@@ -156,9 +156,49 @@ describe("simulation store", () => {
     );
   });
 
-  it("setScenario updates scenarioId", () => {
-    useSimulationStore.getState().setScenario("news_feed");
-    expect(useSimulationStore.getState().scenarioId).toBe("news_feed");
+  it("switchScenario reinitializes simulation with new scenario id", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: "sim-123",
+      state: { ...mockSimResponse(0).state, scenarioId: "notification_channels" },
+      algorithm: "ucb1",
+      seed: 42,
+    });
+    await useSimulationStore
+      .getState()
+      .initialize(mockArms, "ucb1", { alpha: 2.0 }, "notification_channels");
+    const firstId = useSimulationStore.getState().simId;
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      id: "sim-456",
+      state: { ...mockSimResponse(0).state, scenarioId: "news_feed" },
+      algorithm: "ucb1",
+      seed: 42,
+    });
+    await useSimulationStore.getState().switchScenario("news_feed");
+
+    const state = useSimulationStore.getState();
+    expect(state.scenarioId).toBe("news_feed");
+    expect(state.simId).toBe("sim-456");
+    expect(state.simId).not.toBe(firstId);
+  });
+
+  it("reset accepts scenarioId override", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore
+      .getState()
+      .initialize(mockArms, "ucb1", { alpha: 2.0 }, "notification_channels");
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore.getState().reset(undefined, "content_format");
+
+    expect(useSimulationStore.getState().scenarioId).toBe("content_format");
+    expect(api.createSimulation).toHaveBeenLastCalledWith(
+      expect.any(Array),
+      "ucb1",
+      { alpha: 2.0 },
+      42,
+      "content_format",
+    );
   });
 
   it("initialize passes custom scenarioId to API", async () => {
