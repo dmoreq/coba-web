@@ -48,6 +48,16 @@ function toSnakeArms(arms: Arm[] | null) {
   }));
 }
 
+function normalizeSimState(state: Partial<SimState>, algorithm: AlgorithmId): SimState {
+  return {
+    ...(state as SimState),
+    algorithm,
+    featureNames: state.featureNames ?? [],
+    featureLabels: state.featureLabels ?? [],
+    scenarioId: state.scenarioId ?? null,
+  };
+}
+
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
   simId: null,
   simState: null,
@@ -74,7 +84,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       );
       set({
         simId: result.id,
-        simState: { ...(result.state as SimState), hyperparams: { ...hyperparams }, algorithm },
+        simState: {
+          ...normalizeSimState(result.state as SimState, algorithm),
+          hyperparams: { ...hyperparams },
+        },
         scenarioId,
         isLoading: false,
       });
@@ -96,6 +109,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       const newHistory = [...simState.history, stepResponse.step];
       const updatedSimState: SimState = {
         ...simState,
+        featureNames: simState.featureNames ?? [],
+        featureLabels: simState.featureLabels ?? [],
         t: stepResponse.t,
         armStates: stepResponse.armStates,
         regretHistory: stepResponse.regretHistory,
@@ -137,7 +152,10 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       );
       set({
         simId: result.id,
-        simState: { ...(result.state as SimState), hyperparams: { ...hyperparams }, algorithm },
+        simState: {
+          ...normalizeSimState(result.state as SimState, algorithm),
+          hyperparams: { ...hyperparams },
+        },
         isLoading: false,
       });
     } catch (e) {
@@ -171,9 +189,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
       set({
         simId: result.id,
         simState: {
-          ...(result.state as SimState),
+          ...normalizeSimState(result.state as SimState, algo),
           hyperparams: { ...hyperparams },
-          algorithm: algo,
         },
         isLoading: false,
       });

@@ -5,6 +5,16 @@
 
 import type { AlgorithmId } from "./types";
 
+const FALLBACK_ARM_COLORS = ["#228be6", "#12b886", "#fd7e14", "#7950f2", "#e64980", "#2b8a3e"];
+const FALLBACK_ARM_LIGHT_COLORS = [
+  "#e7f5ff",
+  "#e6fcf5",
+  "#fff4e6",
+  "#f3f0ff",
+  "#fce4ec",
+  "#d3f9d8",
+];
+
 function normalizeBaseUrl(url: string): string {
   return url.replace(/\/+$/, "");
 }
@@ -44,6 +54,21 @@ function mapKeys<T>(obj: unknown): T {
     return out as T;
   }
   return obj as T;
+}
+
+function normalizeSimulationArms<T extends ApiSimulation>(simulation: T): T {
+  return {
+    ...simulation,
+    state: {
+      ...simulation.state,
+      arms: simulation.state.arms.map((arm, index) => ({
+        ...arm,
+        color: arm.color || FALLBACK_ARM_COLORS[index % FALLBACK_ARM_COLORS.length],
+        lightColor:
+          arm.lightColor || FALLBACK_ARM_LIGHT_COLORS[index % FALLBACK_ARM_LIGHT_COLORS.length],
+      })),
+    },
+  };
 }
 
 // ── API response types (mapped to camelCase, matching @/lib/types) ──
@@ -217,16 +242,18 @@ export const api = {
     seed: number,
     scenarioId = "notification_channels",
   ): Promise<ApiSimulation> {
-    return request<ApiSimulation>(
+    const simulation = await request<ApiSimulation>(
       "POST",
       "/api/simulate",
       { arms, algorithm, hyperparams, seed, scenario_id: scenarioId },
       { timeout: 15_000 },
     );
+    return normalizeSimulationArms(simulation);
   },
 
   async getSimulation(id: string): Promise<ApiSimulation> {
-    return request<ApiSimulation>("GET", `/api/simulate/${id}`);
+    const simulation = await request<ApiSimulation>("GET", `/api/simulate/${id}`);
+    return normalizeSimulationArms(simulation);
   },
 
   async step(id: string): Promise<ApiStepResponse> {

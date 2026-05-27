@@ -78,23 +78,24 @@ export default function ResultsPage() {
   const segmentBreakdown = isContextual
     ? history.reduce(
         (acc, step) => {
-          if (step.contextSegment) {
-            if (!acc[step.contextSegment]) {
-              acc[step.contextSegment] = {
+          const segment = step.contextSegment;
+          if (segment) {
+            if (!acc[segment]) {
+              acc[segment] = {
                 count: 0,
                 rewards: 0,
                 bestArmPulls: 0,
                 allTrueProbs: arms.map(() => 0),
               };
             }
-            acc[step.contextSegment].count++;
-            acc[step.contextSegment].rewards += step.outcome;
+            acc[segment].count++;
+            acc[segment].rewards += step.outcome;
             if (step.chosenIdx === bestArmIdx) {
-              acc[step.contextSegment].bestArmPulls++;
+              acc[segment].bestArmPulls++;
             }
             if (step.allTrueProbs) {
               step.allTrueProbs.forEach((prob, i) => {
-                acc[step.contextSegment].allTrueProbs[i] += prob;
+                acc[segment].allTrueProbs[i] += prob;
               });
             }
           }

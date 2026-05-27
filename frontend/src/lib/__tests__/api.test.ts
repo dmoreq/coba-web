@@ -30,8 +30,34 @@ describe("api.getAlgorithms", () => {
   });
 });
 
+describe("api.getScenarios", () => {
+  it("returns mapped scenario list", async () => {
+    mockFetch(200, [
+      {
+        id: "notification_channels",
+        label: "Notification Channels",
+        description: "desc",
+        domain: "Marketing",
+        feature_count: 2,
+        arm_count: 4,
+        has_drift: false,
+      },
+    ]);
+    const scenarios = await api.getScenarios();
+    expect(scenarios[0]).toEqual({
+      id: "notification_channels",
+      label: "Notification Channels",
+      description: "desc",
+      domain: "Marketing",
+      featureCount: 2,
+      armCount: 4,
+      hasDrift: false,
+    });
+  });
+});
+
 describe("api.createSimulation", () => {
-  it("sends POST with 4 args", async () => {
+  it("sends POST with current request contract", async () => {
     mockFetch(201, {
       id: "abc",
       state: { t: 0, arms: [], arm_states: [], lin_meta: [], history: [], regret_history: [] },
@@ -46,6 +72,36 @@ describe("api.createSimulation", () => {
     );
     expect(result.id).toBe("abc");
     expect(result.state.t).toBe(0);
+  });
+
+  it("sends scenario_id in request body", async () => {
+    mockFetch(201, {
+      id: "abc",
+      state: { t: 0, arms: [], arm_states: [], lin_meta: [], history: [], regret_history: [] },
+      algorithm: "ucb1",
+      seed: 42,
+      scenario_id: "news_feed",
+    });
+    await api.createSimulation(
+      [{ id: "a", label: "A", true_prob: 0.5, light_color: "#eee" }],
+      "ucb1",
+      { alpha: 2.0 },
+      42,
+      "news_feed",
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      `${BASE}/api/simulate`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          arms: [{ id: "a", label: "A", true_prob: 0.5, light_color: "#eee" }],
+          algorithm: "ucb1",
+          hyperparams: { alpha: 2.0 },
+          seed: 42,
+          scenario_id: "news_feed",
+        }),
+      }),
+    );
   });
 
   it("maps nested snake_case to camelCase", async () => {
@@ -90,6 +146,31 @@ describe("api.createSimulation", () => {
     expect(result.state.history[0].chosenIdx).toBe(0);
     expect(result.state.history[0].scores[0].mean).toBe(0.5);
     expect(result.state.regretHistory).toEqual([0]);
+  });
+
+  it("fills fallback colors for scenario-driven arms", async () => {
+    mockFetch(201, {
+      id: "x",
+      state: {
+        t: 0,
+        arms: [
+          { id: "email", label: "Email", true_prob: 0.2, color: null, light_color: null },
+          { id: "sms", label: "SMS", true_prob: 0.5, color: null, light_color: null },
+        ],
+        arm_states: [],
+        lin_meta: [],
+        algorithm: "linucb",
+        history: [],
+        regret_history: [],
+      },
+      algorithm: "linucb",
+      seed: 42,
+    });
+    const result = await api.createSimulation(null, "linucb", { alpha: 2.0 }, 42);
+    expect(result.state.arms[0].color).toBe("#228be6");
+    expect(result.state.arms[0].lightColor).toBe("#e7f5ff");
+    expect(result.state.arms[1].color).toBe("#12b886");
+    expect(result.state.arms[1].lightColor).toBe("#e6fcf5");
   });
 });
 
@@ -184,5 +265,21 @@ describe("ApiError", () => {
   it("throws on HTTP error", async () => {
     mockFetch(404, { detail: "Not found" });
     await expect(api.getSimulation("x")).rejects.toThrow(ApiError);
+  });
+
+  it("propagates abort errors on timeout", async () => {
+    vi.useFakeTimers();
+    const abortError = new DOMException("The operation was aborted.", "AbortError");
+    globalThis.fetch = vi.fn().mockImplementation(async (_input, init?: RequestInit) => {
+      await new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(abortError));
+      });
+    });
+
+    const pending = api.getSimulation("x");
+    const assertion = expect(pending).rejects.toBe(abortError);
+    await vi.advanceTimersByTimeAsync(10_000);
+    await assertion;
+    vi.useRealTimers();
   });
 });

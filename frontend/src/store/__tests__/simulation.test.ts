@@ -102,6 +102,7 @@ beforeEach(() => {
     isRunning: false,
     speed: 2,
     seed: 42,
+    scenarioId: "notification_channels",
     isLoading: false,
     error: null,
   });
@@ -121,6 +122,23 @@ describe("simulation store", () => {
     expect(api.createSimulation).toHaveBeenCalledTimes(1);
   });
 
+  it("initialize normalizes missing feature metadata", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockSimResponse(0),
+      state: {
+        ...mockSimResponse(0).state,
+        featureNames: undefined,
+        featureLabels: undefined,
+      },
+    });
+
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+
+    const state = useSimulationStore.getState();
+    expect(state.simState?.featureNames).toEqual([]);
+    expect(state.simState?.featureLabels).toEqual([]);
+  });
+
   it("initialize sends snake_case arms and hyperparams", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
     await useSimulationStore.getState().initialize(mockArms, "linucb", {
@@ -130,11 +148,30 @@ describe("simulation store", () => {
       n_clusters: 5,
     });
     expect(api.createSimulation).toHaveBeenCalledWith(
-      expect.arrayContaining([expect.objectContaining({ true_prob: 0.3 })]),
+      expect.arrayContaining([expect.objectContaining({ true_prob: 0.3, light_color: "#e7f5ff" })]),
       "linucb",
       { alpha: 2.0, l2_lambda: 1.0, gamma: 1.0, n_clusters: 5 },
-      expect.any(Number),
+      42,
+      "notification_channels",
     );
+  });
+
+  it("setScenario updates scenarioId", () => {
+    useSimulationStore.getState().setScenario("news_feed");
+    expect(useSimulationStore.getState().scenarioId).toBe("news_feed");
+  });
+
+  it("initialize passes custom scenarioId to API", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 }, "news_feed");
+    expect(api.createSimulation).toHaveBeenCalledWith(
+      expect.any(Array),
+      "ucb1",
+      { alpha: 2.0 },
+      42,
+      "news_feed",
+    );
+    expect(useSimulationStore.getState().scenarioId).toBe("news_feed");
   });
 
   it("initialize cleans up old simulation", async () => {
@@ -236,7 +273,8 @@ describe("simulation store", () => {
       expect.any(Array),
       "linucb",
       { alpha: 3.0, l2_lambda: 2.0, n_clusters: 7 },
-      expect.any(Number),
+      42,
+      "notification_channels",
     );
   });
 
@@ -252,8 +290,28 @@ describe("simulation store", () => {
       expect.any(Array),
       "thompson",
       {}, // empty — thompson has no hyperparams
-      expect.any(Number),
+      42,
+      "notification_channels",
     );
+  });
+
+  it("reset preserves scenarioId", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore
+      .getState()
+      .initialize(mockArms, "ucb1", { alpha: 2.0 }, "product_recommendations");
+
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce(mockSimResponse(0));
+    await useSimulationStore.getState().reset();
+
+    expect(api.createSimulation).toHaveBeenLastCalledWith(
+      expect.any(Array),
+      "ucb1",
+      { alpha: 2.0 },
+      42,
+      "product_recommendations",
+    );
+    expect(useSimulationStore.getState().scenarioId).toBe("product_recommendations");
   });
 
   it("reset returns early if no simState", async () => {
@@ -273,7 +331,8 @@ describe("simulation store", () => {
       expect.any(Array),
       "thompson",
       { alpha: 1.5, epsilon: 0.2 },
-      expect.any(Number),
+      42,
+      "notification_channels",
     );
   });
 
