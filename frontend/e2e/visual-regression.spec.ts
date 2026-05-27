@@ -1,6 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { compareStep } from "./helpers/compare";
-import { gotoPlayground, gotoResults, stepTimes } from "./helpers/playground";
+import {
+  gotoPlayground,
+  gotoResults,
+  openScenarioPicker,
+  revealTruth,
+  stepTimes,
+} from "./helpers/playground";
 
 test.describe("Visual regression", () => {
   test("playground page after 20 steps", async ({ page }) => {
@@ -41,5 +47,34 @@ test.describe("Visual regression", () => {
     await gotoResults(page);
     await page.getByText("Simulation Results").waitFor({ timeout: 15_000 });
     await expect(page).toHaveScreenshot("results-populated.png", { fullPage: true });
+  });
+
+  test("glossary filtered by UCB search", async ({ page }) => {
+    await page.goto("/glossary");
+    await page.getByRole("heading", { name: "Glossary" }).waitFor({ timeout: 15_000 });
+    await page.getByPlaceholder(/Search/).fill("UCB");
+    await page.getByText("UCB1").waitFor({ state: "visible", timeout: 15_000 });
+    await expect(page).toHaveScreenshot("glossary-filtered.png", { fullPage: true });
+  });
+
+  test("scenario picker open", async ({ page }) => {
+    await gotoPlayground(page);
+    await openScenarioPicker(page);
+    await expect(page).toHaveScreenshot("scenario-picker-open.png", { fullPage: true });
+  });
+
+  test("playground truth revealed after step", async ({ page }) => {
+    await gotoPlayground(page);
+    await stepTimes(page, 1);
+    await revealTruth(page);
+    await expect(page).toHaveScreenshot("playground-truth-revealed.png", { fullPage: true });
+  });
+
+  test("compare truth revealed after step", async ({ page }) => {
+    await page.goto("/compare");
+    await page.getByText("Compare Algorithms").waitFor({ timeout: 15_000 });
+    await compareStep(page);
+    await revealTruth(page);
+    await expect(page).toHaveScreenshot("compare-truth-revealed.png", { fullPage: true });
   });
 });
