@@ -1,18 +1,5 @@
 import { test, expect } from "@playwright/test";
-
-const ALGORITHMS_P0 = [
-  { name: "UCB1", algo: "ucb1" },
-  { name: "Thompson", algo: "thompson" },
-  { name: "\u03B5-Greedy", algo: "epsilon_greedy" },
-  { name: "LinUCB", algo: "linucb" },
-];
-
-const ALGORITHMS_P1 = [
-  { name: "LinTS", algo: "lints" },
-  { name: "SW-LinUCB", algo: "linucb_sw" },
-  { name: "Softmax", algo: "softmax" },
-  { name: "Neural Linear", algo: "neural_linear" },
-];
+import { ALGORITHM_SMOKE } from "./fixtures/algorithms";
 
 test.describe("Landing page and navigation", () => {
   test("landing page loads", async ({ page }) => {
@@ -93,28 +80,12 @@ test.describe("Playground smoke tests", () => {
   });
 });
 
-test.describe("16-algorithm smoke tests (P0)", () => {
-  for (const { name } of ALGORITHMS_P0) {
-    test(`${name} runs 5 steps without error`, async ({ page }) => {
-      await page.goto("/playground");
-      await page.waitForTimeout(2000);
-      await page.getByText(name).click();
-      await page.waitForTimeout(500);
-      for (let i = 0; i < 5; i++) {
-        await page.getByText("Step \u2192").click();
-        await page.waitForTimeout(200);
-      }
-      await expect(page.getByText(/t=5/)).toBeVisible();
-    });
-  }
-});
-
-test.describe("16-algorithm smoke tests (P1)", () => {
-  for (const { name } of ALGORITHMS_P1) {
+test.describe("Algorithm smoke (all 16)", () => {
+  for (const { name } of ALGORITHM_SMOKE) {
     test(`${name} runs 3 steps without error`, async ({ page }) => {
       await page.goto("/playground");
       await page.waitForTimeout(2000);
-      await page.getByText(name).click();
+      await page.getByText(name, { exact: true }).click();
       await page.waitForTimeout(500);
       for (let i = 0; i < 3; i++) {
         await page.getByText("Step \u2192").click();
