@@ -17,7 +17,8 @@ interface SimulationStore {
   speed: number;
   seed: number;
   scenarioId: string;
-  isLoading: boolean;
+  isStepping: boolean;
+  isRecreating: boolean;
   error: string | null;
 
   initialize: (
@@ -66,6 +67,27 @@ function normalizeSimState(state: Partial<SimState>, algorithm: AlgorithmId): Si
   };
 }
 
+function markRecreateStart() {
+  if (typeof performance !== "undefined") {
+    performance.mark("playground-recreate-start");
+  }
+}
+
+function markRecreateEnd() {
+  if (typeof performance !== "undefined") {
+    performance.mark("playground-recreate-end");
+    try {
+      performance.measure(
+        "playground-recreate",
+        "playground-recreate-start",
+        "playground-recreate-end",
+      );
+    } catch {
+      /* marks may be missing in tests */
+    }
+  }
+}
+
 export const useSimulationStore = create<SimulationStore>((set, get) => ({
   simId: null,
   simState: null,
@@ -73,12 +95,14 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
   speed: 0.5,
   seed: 42,
   scenarioId: "notification_channels",
-  isLoading: false,
+  isStepping: false,
+  isRecreating: false,
   error: null,
 
   initialize: async (arms, algorithm, hyperparams, scenarioId = "notification_channels") => {
     const { simId: oldSimId } = get();
-    set({ isLoading: true, error: null });
+    markRecreateStart();
+    set({ isRecreating: true, error: null, isRunning: false });
     try {
       if (oldSimId) {
         await api.deleteSimulation(oldSimId).catch(() => {});
@@ -97,23 +121,28 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
           hyperparams: { ...hyperparams },
         },
         scenarioId,
-        isLoading: false,
+        isRecreating: false,
       });
     } catch (e) {
       set({
-        isLoading: false,
+        isRecreating: false,
         error: e instanceof Error ? e.message : "Failed to create simulation",
       });
+    } finally {
+      markRecreateEnd();
     }
   },
 
   step: async () => {
-    const { simId, simState } = get();
-    if (!simId || !simState) return;
-    set({ isLoading: true, error: null });
+    const { simId, simState, isStepping, isRecreating } = get();
+    if (!simId || !simState || isStepping || isRecreating) return;
+
+    if (typeof performance !== "undefined") {
+      performance.mark("playground-step-start");
+    }
+    set({ isStepping: true, error: null });
     try {
       const stepResponse: ApiStepResponse = await api.step(simId);
-      // Reconstruct SimState from StepResponse without fetching full sim
       const cap = MAX_HISTORY_LENGTH;
       const newHistory = [...simState.history, stepResponse.step].slice(-cap);
       const updatedSimState: SimState = {
@@ -133,17 +162,28 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
         regretHistory: stepResponse.regretHistory.slice(-cap),
         history: newHistory,
       };
-      set({ simState: updatedSimState, isLoading: false });
+      set({ simState: updatedSimState, isStepping: false });
+      if (typeof performance !== "undefined") {
+        performance.mark("playground-step-end");
+        try {
+          performance.measure("playground-step", "playground-step-start", "playground-step-end");
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (e) {
       set({
-        isLoading: false,
+        isStepping: false,
         error: e instanceof Error ? e.message : "Step failed",
         isRunning: false,
       });
     }
   },
 
-  play: () => set({ isRunning: true }),
+  play: () => {
+    if (get().isRecreating) return;
+    set({ isRunning: true });
+  },
 
   pause: () => set({ isRunning: false }),
 
@@ -158,7 +198,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
     const { simState, seed, simId: oldSimId, scenarioId: currentScenario } = get();
     if (!simState) return;
     const targetScenario = scenarioId ?? currentScenario;
-    set({ isRunning: false, isLoading: true, error: null });
+    markRecreateStart();
+    set({ isRunning: false, isRecreating: true, error: null });
     try {
       if (oldSimId) {
         await api.deleteSimulation(oldSimId).catch(() => {});
@@ -182,13 +223,15 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
           hyperparams: { ...hyperparams },
         },
         scenarioId: targetScenario,
-        isLoading: false,
+        isRecreating: false,
       });
     } catch (e) {
       set({
-        isLoading: false,
+        isRecreating: false,
         error: e instanceof Error ? e.message : "Reset failed",
       });
+    } finally {
+      markRecreateEnd();
     }
   },
 
@@ -198,7 +241,8 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
 
   applySettings: async ({ arms, algorithm: algo, hyperparams }) => {
     const { simId: oldSimId, scenarioId } = get();
-    set({ isLoading: true, error: null, isRunning: false });
+    markRecreateStart();
+    set({ isRecreating: true, error: null, isRunning: false });
     try {
       if (oldSimId) {
         await api.deleteSimulation(oldSimId).catch(() => {});
@@ -216,13 +260,15 @@ export const useSimulationStore = create<SimulationStore>((set, get) => ({
           ...normalizeSimState(result.state as SimState, algo),
           hyperparams: { ...hyperparams },
         },
-        isLoading: false,
+        isRecreating: false,
       });
     } catch (e) {
       set({
-        isLoading: false,
+        isRecreating: false,
         error: e instanceof Error ? e.message : "Apply settings failed",
       });
+    } finally {
+      markRecreateEnd();
     }
   },
 

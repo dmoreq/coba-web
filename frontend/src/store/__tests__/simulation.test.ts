@@ -104,7 +104,8 @@ beforeEach(() => {
     speed: 2,
     seed: 42,
     scenarioId: "notification_channels",
-    isLoading: false,
+    isStepping: false,
+    isRecreating: false,
     error: null,
   });
   (api.deleteSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
@@ -225,12 +226,13 @@ describe("simulation store", () => {
     expect(api.deleteSimulation).toHaveBeenCalledWith("sim-123");
   });
 
-  it("initialize sets loading state", async () => {
+  it("initialize sets recreating state", async () => {
     (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValue(mockSimResponse(0));
     const promise = useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
-    expect(useSimulationStore.getState().isLoading).toBe(true);
+    expect(useSimulationStore.getState().isRecreating).toBe(true);
+    expect(useSimulationStore.getState().isStepping).toBe(false);
     await promise;
-    expect(useSimulationStore.getState().isLoading).toBe(false);
+    expect(useSimulationStore.getState().isRecreating).toBe(false);
   });
 
   it("initialize sets error on API failure", async () => {
@@ -282,6 +284,18 @@ describe("simulation store", () => {
     const state = useSimulationStore.getState();
     expect(state.error).toBe("Step failed");
     expect(state.isRunning).toBe(false);
+    expect(state.simState?.t).toBe(0);
+  });
+
+  it("step preserves simState t on failure", async () => {
+    (api.createSimulation as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ...mockSimResponse(1),
+      state: { ...mockSimResponse(1).state, t: 1 },
+    });
+    await useSimulationStore.getState().initialize(mockArms, "ucb1", { alpha: 2.0 });
+    (api.step as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("Step failed"));
+    await useSimulationStore.getState().step();
+    expect(useSimulationStore.getState().simState?.t).toBe(1);
   });
 
   it("play/pause toggle isRunning", () => {
@@ -449,5 +463,84 @@ describe("simulation store", () => {
     expect(state).not.toBeNull();
     expect(state?.history.length).toBeLessThanOrEqual(MAX_HISTORY_LENGTH);
     expect(state?.regretHistory.length).toBeLessThanOrEqual(MAX_HISTORY_LENGTH);
+  });
+});
+
+const mockStepResponseAt = (t: number) => ({
+  t,
+  step: {
+    t,
+    chosenIdx: 0,
+    outcome: 1,
+    stepRegret: 0,
+    cumRegret: 0,
+    scores: [],
+    context: null,
+    wasRandom: false,
+    trueProb: 0.5,
+  },
+  armStates: mockSimResponse(t).state.armStates,
+  regretHistory: Array.from({ length: t }, () => 0),
+});
+
+describe("loading flags and in-flight guards", () => {
+  beforeEach(() => {
+    useSimulationStore.setState({
+      simId: null,
+      simState: null,
+      isRunning: false,
+      isStepping: false,
+      isRecreating: false,
+      speed: 0.5,
+      seed: 42,
+      scenarioId: "notification_channels",
+      error: null,
+    });
+    vi.clearAllMocks();
+  });
+
+  it("step sets isStepping true then false", async () => {
+    vi.mocked(api.createSimulation).mockResolvedValue(mockSimResponse(0) as never);
+    vi.mocked(api.step).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve(mockStepResponseAt(1) as never), 10);
+        }),
+    );
+    await useSimulationStore.getState().initialize(null, "ucb1", { alpha: 2.0 });
+    const stepPromise = useSimulationStore.getState().step();
+    expect(useSimulationStore.getState().isStepping).toBe(true);
+    expect(useSimulationStore.getState().isRecreating).toBe(false);
+    await stepPromise;
+    expect(useSimulationStore.getState().isStepping).toBe(false);
+  });
+
+  it("step returns immediately when already stepping", async () => {
+    vi.mocked(api.createSimulation).mockResolvedValue(mockSimResponse(0) as never);
+    vi.mocked(api.step).mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockStepResponseAt(1) as never), 50)),
+    );
+    await useSimulationStore.getState().initialize(null, "ucb1", { alpha: 2.0 });
+    void useSimulationStore.getState().step();
+    await useSimulationStore.getState().step();
+    expect(api.step).toHaveBeenCalledTimes(1);
+  });
+
+  it("step returns immediately while recreating", async () => {
+    vi.mocked(api.createSimulation).mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockSimResponse(0) as never), 50)),
+    );
+    void useSimulationStore.getState().initialize(null, "ucb1", { alpha: 2.0 });
+    await useSimulationStore.getState().step();
+    expect(api.step).not.toHaveBeenCalled();
+  });
+
+  it("play does not start while recreating", async () => {
+    vi.mocked(api.createSimulation).mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve(mockSimResponse(0) as never), 50)),
+    );
+    void useSimulationStore.getState().initialize(null, "ucb1", { alpha: 2.0 });
+    useSimulationStore.getState().play();
+    expect(useSimulationStore.getState().isRunning).toBe(false);
   });
 });
