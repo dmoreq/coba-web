@@ -1,4 +1,5 @@
-import type { Arm, StepRecord } from "@/lib/types";
+import { CONTEXTUAL_ALGORITHMS } from "@/lib/constants";
+import type { AlgorithmId, Arm, StepRecord } from "@/lib/types";
 import { memo, useState } from "react";
 
 interface StepFeedEntryProps {
@@ -7,6 +8,7 @@ interface StepFeedEntryProps {
   compact?: boolean;
   featureNames?: string[];
   featureLabels?: string[];
+  algorithm?: AlgorithmId;
 }
 
 function StepFeedEntryComponent({
@@ -15,10 +17,11 @@ function StepFeedEntryComponent({
   compact = false,
   featureNames = [],
   featureLabels = [],
+  algorithm = "ucb1",
 }: StepFeedEntryProps) {
   const chosen = arms[step.chosenIdx];
   const isReward = step.outcome === 1;
-  const [showContext, setShowContext] = useState(false);
+  const [showContext, setShowContext] = useState(() => CONTEXTUAL_ALGORITHMS.has(algorithm));
   const hasContext = step.context && featureNames.length > 0;
 
   return (
@@ -63,7 +66,10 @@ function StepFeedEntryComponent({
             {showContext ? "▼" : "▶"} context
           </button>
           {showContext && (
-            <div className="mt-[5px] ml-[8px] space-y-[3px] text-[10px] font-mono text-gray-6">
+            <div
+              data-testid="context-values"
+              className="mt-[5px] ml-[8px] space-y-[3px] text-[10px] font-mono text-gray-6"
+            >
               {step.context?.map((val, i) => (
                 <div key={i}>
                   <span className="font-medium">{featureLabels[i] || featureNames[i]}:</span>{" "}

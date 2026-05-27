@@ -1,6 +1,6 @@
 "use client";
 
-import type { Arm, StepRecord } from "@/lib/types";
+import type { AlgorithmId, Arm, StepRecord } from "@/lib/types";
 import { memo, useMemo } from "react";
 import { StepFeedEntry } from "./StepFeedEntry";
 
@@ -10,6 +10,7 @@ interface StepFeedProps {
   t: number;
   featureNames?: string[];
   featureLabels?: string[];
+  algorithm?: AlgorithmId;
 }
 
 function StepFeedComponent({
@@ -18,6 +19,7 @@ function StepFeedComponent({
   t,
   featureNames = [],
   featureLabels = [],
+  algorithm = "ucb1",
 }: StepFeedProps) {
   const recentSteps = useMemo(() => [...history].reverse().slice(0, 14), [history]);
 
@@ -41,6 +43,7 @@ function StepFeedComponent({
             compact={false}
             featureNames={featureNames}
             featureLabels={featureLabels}
+            algorithm={algorithm}
           />
         ))}
       </div>
