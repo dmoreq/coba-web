@@ -21,8 +21,18 @@ interface RegretLineChartProps {
   width?: number;
   height?: number;
   color?: string;
+  /** Absolute simulation step when drift starts (scenario config). */
   driftStep?: number;
+  /** Absolute simulation step when drift ends (scenario config). */
   driftEndStep?: number;
+  /** Current simulation step; maps windowed regretHistory to absolute t on the x-axis. */
+  totalSteps?: number;
+}
+
+/** First absolute step index represented by regretHistory[0]. */
+export function historyStartStep(totalSteps: number, historyLength: number): number {
+  if (historyLength <= 0) return 1;
+  return Math.max(1, totalSteps - historyLength + 1);
 }
 
 function RegretLineChartComponent({
@@ -32,15 +42,22 @@ function RegretLineChartComponent({
   color = "#228be6",
   driftStep,
   driftEndStep,
+  totalSteps,
 }: RegretLineChartProps) {
   if (regretHistory.length < 2) {
     return <EmptyChart width={width} height={height} message="Run some steps to see regret" />;
   }
 
-  const data = regretHistory.map((r, i) => ({ t: i + 1, regret: r }));
+  const startT = totalSteps != null ? historyStartStep(totalSteps, regretHistory.length) : 1;
+  const data = regretHistory.map((r, i) => ({ t: startT + i, regret: r }));
   const step = Math.max(1, Math.floor(data.length / MAX_HISTORY_LENGTH));
   const sampled = data.filter((_, i) => i % step === 0 || i === data.length - 1);
   const maxR = Math.max(...regretHistory, 0.01);
+  const domainMin = data[0]?.t ?? 1;
+  const domainMax = data[data.length - 1]?.t ?? domainMin;
+  const showDriftBegin = driftStep != null && driftStep >= domainMin && driftStep <= domainMax;
+  const showDriftEnd =
+    driftEndStep != null && driftEndStep >= domainMin && driftEndStep <= domainMax;
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -49,7 +66,7 @@ function RegretLineChartComponent({
         <XAxis
           dataKey="t"
           type="number"
-          domain={[1, data.length]}
+          domain={[domainMin, domainMax]}
           allowDataOverflow
           {...CHART_THEME.axis}
           label={{
@@ -91,7 +108,7 @@ function RegretLineChartComponent({
           dot={false}
           activeDot={{ r: 3, fill: color }}
         />
-        {driftStep != null && (
+        {showDriftBegin && (
           <ReferenceLine
             x={driftStep}
             stroke="#e8590c"
@@ -105,7 +122,7 @@ function RegretLineChartComponent({
             }}
           />
         )}
-        {driftEndStep != null && (
+        {showDriftEnd && (
           <ReferenceLine
             x={driftEndStep}
             stroke="#e8590c"

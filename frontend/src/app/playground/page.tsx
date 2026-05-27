@@ -158,6 +158,7 @@ export default function PlaygroundPage() {
               <RegretLineChart
                 regretHistory={display.regretHistory}
                 height={180}
+                totalSteps={display.t}
                 driftStep={selectedScenario?.driftStep ?? undefined}
                 driftEndStep={selectedScenario?.driftEndStep ?? undefined}
               />
