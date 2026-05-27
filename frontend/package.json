@@ -12,7 +12,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:slow": "E2E_SLOW=1 playwright test e2e/playground.spec.ts --grep \"drift annotations\""
   },
   "dependencies": {
     "next": "^15.5.18",

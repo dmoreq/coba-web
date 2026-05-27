@@ -1,4 +1,4 @@
-import { defineConfig } from "@playwright/test";
+import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
@@ -17,6 +17,18 @@ export default defineConfig({
     baseURL: "http://localhost:3000",
     headless: true,
   },
+  projects: [
+    {
+      name: "chromium",
+      testIgnore: /mobile\.spec\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile",
+      testMatch: /mobile\.spec\.ts/,
+      use: { ...devices["Pixel 5"] },
+    },
+  ],
   webServer: [
     {
       command: "cd ../backend && uv run uvicorn coba_server:app --port 8000",
